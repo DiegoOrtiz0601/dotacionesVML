@@ -11,7 +11,7 @@ class UsuarioSistemaSeeder extends Seeder
     public function run()
     {
         DB::table('tbl_usuarios_sistema')->insert([
-            'NombreUsuario' => 'prueba1',
+            'NombreUsuario' => 'admin',
             'PasswordUsuario' => Hash::make('123456'), // Encripta la contraseña
             'RolUsuario' => 'usuario',
             'EstadoUsuario' => 1,

@@ -26,7 +26,7 @@ class TblUsuarioSistema extends Authenticatable
         'PasswordUsuario',
         'remember_token',
     ];
-    
+
     public function getAuthPassword()
     {
         return $this->PasswordUsuario;

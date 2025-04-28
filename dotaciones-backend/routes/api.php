@@ -2,18 +2,18 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\TblUsuarioSistemaController;
-use App\Http\Controllers\TblCiudadController;
-use App\Http\Controllers\TblEmpresaController;
-use App\Http\Controllers\TblSedeController;
-use App\Http\Controllers\TblCargoController;
-use App\Http\Controllers\TblUsuarioEmpresaSedeCargoController;
-use App\Http\Controllers\TblTipoSolicitudController;
-use App\Http\Controllers\TblSolicitudController;
-use App\Http\Controllers\TblDetalleSolicitudEmpleadoController;
-use App\Http\Controllers\TblElementoController;
-use App\Http\Controllers\TblTallaElementoController;
-use App\Http\Controllers\TblDetalleSolicitudElementoController;
+use App\Http\Controllers\Api\TblUsuarioSistemaController;
+use App\Http\Controllers\Api\TblCiudadController;
+use App\Http\Controllers\Api\TblEmpresaController;
+use App\Http\Controllers\Api\TblSedeController;
+use App\Http\Controllers\Api\TblCargoController;
+use App\Http\Controllers\Api\TblUsuarioEmpresaSedeCargoController;
+use App\Http\Controllers\Api\TblTipoSolicitudController;
+use App\Http\Controllers\Api\TblSolicitudController;
+use App\Http\Controllers\Api\TblDetalleSolicitudEmpleadoController;
+use App\Http\Controllers\Api\TblElementoController;
+use App\Http\Controllers\Api\TblTallaElementoController;
+use App\Http\Controllers\Api\TblDetalleSolicitudElementoController;
 use App\Http\Controllers\AuthController;
 
 
@@ -32,6 +32,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('talla-elemento', TblTallaElementoController::class);
     Route::apiResource('detalle-solicitud-elemento', TblDetalleSolicitudElementoController::class);
     Route::post('/login', [AuthController::class, 'login']);
-    Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
 });
