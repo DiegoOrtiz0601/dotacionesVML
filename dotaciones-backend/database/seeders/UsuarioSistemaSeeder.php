@@ -3,18 +3,20 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use App\Models\UsuarioSistema;
 
 class UsuarioSistemaSeeder extends Seeder
 {
     public function run()
     {
-        UsuarioSistema::create([
-            'usuario' => 'admin',
-            'contrasena' => Hash::make('123456'),
-            'rol' => 'admin',
-            'estado' => 1,
+        DB::table('tbl_usuarios_sistema')->insert([
+            'NombreUsuario' => 'prueba1',
+            'PasswordUsuario' => Hash::make('123456'), // Encripta la contraseña
+            'RolUsuario' => 'usuario',
+            'EstadoUsuario' => 1,
+            'created_at' => now(),
+            'updated_at' => now()
         ]);
     }
 }

@@ -9,14 +9,18 @@ function Login() {
 
   const handleLogin = async () => {
     try {
-      const response = await api.post('/login', { usuario, contrasena })
-      localStorage.setItem('access_token', response.data.access_token)
-      localStorage.setItem('usuario', JSON.stringify(response.data.usuario))
-      window.location.href = '/dashboard'
+      const response = await api.post('/login', { 
+        NombreUsuario: usuario, 
+        PasswordUsuario: contrasena 
+      });
+      localStorage.setItem('access_token', response.data.access_token);
+      localStorage.setItem('usuario', JSON.stringify(response.data.usuario));
+      window.location.href = '/dashboard';
     } catch (err) {
-      setError('❌ Credenciales inválidas o error de conexión')
+      setError('❌ Credenciales inválidas o error de conexión');
     }
   }
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 relative overflow-hidden">
