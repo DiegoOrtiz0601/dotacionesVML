@@ -16,7 +16,10 @@ use App\Http\Controllers\Api\TblTallaElementoController;
 use App\Http\Controllers\Api\TblDetalleSolicitudElementoController;
 use App\Http\Controllers\AuthController;
 
+// 👇 Login debe quedar totalmente fuera, sin protección
+Route::post('/login', [AuthController::class, 'login']);
 
+// 👇 Todas estas rutas SÍ protegidas por auth:sanctum
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('usuarios-sistema', TblUsuarioSistemaController::class);
@@ -31,7 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('elementos', TblElementoController::class);
     Route::apiResource('talla-elemento', TblTallaElementoController::class);
     Route::apiResource('detalle-solicitud-elemento', TblDetalleSolicitudElementoController::class);
-    Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
+    // 👇 Logout ya está dentro del grupo protegido
+    Route::post('/logout', [AuthController::class, 'logout']);
 });

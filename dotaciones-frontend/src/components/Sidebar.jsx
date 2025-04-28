@@ -1,12 +1,11 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom';
 
 function Sidebar() {
-  const location = useLocation()
-  const usuario = JSON.parse(localStorage.getItem('usuario'))
+  const location = useLocation();
+  const usuario = JSON.parse(localStorage.getItem('usuario'));
 
-  // Solo mostrar si está autenticado y es del rol 'usuario'
-  if (!usuario || usuario.rol !== 'usuario') {
-    return null
+  if (!usuario || usuario.RolUsuario !== 'usuario') {
+    return null;
   }
 
   const links = [
@@ -15,7 +14,7 @@ function Sidebar() {
     { path: '/solicitudes', label: 'Mis Solicitudes', icon: '📄' },
     { path: '/entregas', label: 'Entrega de Dotación', icon: '🎯' },
     { path: '/configuracion', label: 'Configuración', icon: '⚙️' },
-  ]
+  ];
 
   return (
     <aside className="w-64 bg-primario text-white min-h-screen fixed p-6 shadow-xl">
@@ -35,7 +34,7 @@ function Sidebar() {
         ))}
       </nav>
     </aside>
-  )
+  );
 }
 
-export default Sidebar
+export default Sidebar;
