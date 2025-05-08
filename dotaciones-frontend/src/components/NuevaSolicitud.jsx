@@ -1,125 +1,201 @@
+import { useEffect, useState } from 'react'
+import api from '../api/axios'
+
 function NuevaSolicitud() {
-    return (
-      <div className="p-6 bg-white rounded-xl shadow-md">
-  
-        {/* Encabezado */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-primario">
-            📝 Crear nueva solicitud
-          </h2>
-          <span className="text-sm font-semibold text-gray-500">
-            N° Solicitud: <span className="text-secundario">TEMP-001</span>
-          </span>
+  const [empresas, setEmpresas] = useState([])
+  const [sedes, setSedes] = useState([])
+  const [cargos, setCargos] = useState([])
+  const [tiposSolicitud, setTiposSolicitud] = useState([])
+
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState('')
+  const [sedeSeleccionada, setSedeSeleccionada] = useState('')
+  const [cargoSeleccionado, setCargoSeleccionado] = useState('')
+  const [tipoSolicitudSeleccionado, setTipoSolicitudSeleccionado] = useState('')
+
+  const [numeroSolicitud, setNumeroSolicitud] = useState('')
+  const [nombresEmpleado, setNombresEmpleado] = useState('')
+  const [documentoEmpleado, setDocumentoEmpleado] = useState('')
+
+  // Cargar empresas y sedes
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        const response = await api.get('/mis-empresas-sedes')
+        setEmpresas(response.data.empresas)
+        setSedes(response.data.sedes)
+      } catch (error) {
+        console.error('Error cargando empresas y sedes:', error)
+      }
+    }
+
+    cargarDatos()
+  }, [])
+
+  // Filtrar sedes cuando cambia empresa
+  const sedesFiltradas = sedes.filter(s => s.IdEmpresa == empresaSeleccionada)
+
+  // Cargar cargos cuando hay empresa + sede
+  useEffect(() => {
+    const cargarCargos = async () => {
+      if (empresaSeleccionada && sedeSeleccionada) {
+        try {
+          const response = await api.get('/cargos-por-empresa-sede', {
+            params: {
+              idEmpresa: empresaSeleccionada,
+              idSede: sedeSeleccionada
+            }
+          })
+          setCargos(response.data)
+        } catch (error) {
+          console.error('Error cargando cargos:', error)
+        }
+      }
+    }
+
+    cargarCargos()
+  }, [empresaSeleccionada, sedeSeleccionada])
+
+  // Cargar tipos de solicitud (si los tienes en una tabla)
+  useEffect(() => {
+    const cargarTipos = async () => {
+      try {
+        const response = await api.get('/tipo-solicitud')
+        setTiposSolicitud(response.data)
+      } catch (error) {
+        console.error('Error cargando tipos de solicitud:', error)
+      }
+    }
+
+    cargarTipos()
+  }, [])
+
+  // Generar número de solicitud automáticamente
+  useEffect(() => {
+    const generarNumero = async () => {
+      if (empresaSeleccionada && sedeSeleccionada) {
+        try {
+          const response = await api.get('/generar-numero-solicitud')
+          setNumeroSolicitud(response.data.numeroSolicitud)
+        } catch (error) {
+          console.error('Error generando número:', error)
+        }
+      }
+    }
+
+    generarNumero()
+  }, [empresaSeleccionada, sedeSeleccionada])
+
+  return (
+    <div className="p-6 bg-white rounded-xl shadow-md">
+      {/* Encabezado */}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-primario">📝 Crear nueva solicitud</h2>
+        <span className="text-sm font-semibold text-gray-500">
+          N° Solicitud: <span className="text-secundario">{numeroSolicitud || '---'}</span>
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* Empresa */}
+        <div>
+          <label className="block font-semibold text-sm mb-1">Empresa</label>
+          <select
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            value={empresaSeleccionada}
+            onChange={e => {
+              setEmpresaSeleccionada(e.target.value)
+              setSedeSeleccionada('')
+              setCargoSeleccionado('')
+            }}
+          >
+            <option value="">Seleccione empresa</option>
+            {empresas.map(e => (
+              <option key={e.IdEmpresa} value={e.IdEmpresa}>
+                {e.NombreEmpresa}
+              </option>
+            ))}
+          </select>
         </div>
-  
-        {/* Filtros: Empresa, Sede, Área */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div>
-            <label className="block font-semibold text-sm mb-1">Empresa</label>
-            <select className="w-full border border-gray-300 rounded px-3 py-2">
-              <option>Seleccione empresa</option>
-            </select>
-          </div>
-          <div>
-            <label className="block font-semibold text-sm mb-1">Sede</label>
-            <select className="w-full border border-gray-300 rounded px-3 py-2">
-              <option>Seleccione sede</option>
-            </select>
-          </div>
-          <div>
-            <label className="block font-semibold text-sm mb-1">Área</label>
-            <select className="w-full border border-gray-300 rounded px-3 py-2">
-              <option>Seleccione área</option>
-            </select>
-          </div>
+
+        {/* Sede */}
+        <div>
+          <label className="block font-semibold text-sm mb-1">Sede</label>
+          <select
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            value={sedeSeleccionada}
+            onChange={e => setSedeSeleccionada(e.target.value)}
+            disabled={!empresaSeleccionada}
+          >
+            <option value="">Seleccione sede</option>
+            {sedesFiltradas.map(s => (
+              <option key={s.IdSede} value={s.IdSede}>
+                {s.NombreSede}
+              </option>
+            ))}
+          </select>
         </div>
-  
-        {/* Buscador */}
-        <div className="mb-4">
+
+        {/* Cargo */}
+        <div>
+          <label className="block font-semibold text-sm mb-1">Cargo</label>
+          <select
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            value={cargoSeleccionado}
+            onChange={e => setCargoSeleccionado(e.target.value)}
+            disabled={!sedeSeleccionada}
+          >
+            <option value="">Seleccione cargo</option>
+            {cargos.map((c, idx) => (
+  <option key={c.IdCargo} value={c.IdCargo}>
+    {c.NombreCargo}
+  </option>
+))}
+          </select>
+        </div>
+
+        {/* Tipo de solicitud */}
+        <div>
+          <label className="block font-semibold text-sm mb-1">Tipo de solicitud</label>
+          <select
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            value={tipoSolicitudSeleccionado}
+            onChange={e => setTipoSolicitudSeleccionado(e.target.value)}
+          >
+            <option value="">Seleccione tipo</option>
+            {tiposSolicitud.map(t => (
+              <option key={t.id} value={t.id}>
+                {t.NombreTipo}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Nombres */}
+        <div>
+          <label className="block font-semibold text-sm mb-1">Nombres y apellidos</label>
           <input
             type="text"
-            placeholder="🔍 Buscar empleado por nombre o documento..."
             className="w-full border border-gray-300 rounded px-3 py-2"
+            value={nombresEmpleado}
+            onChange={e => setNombresEmpleado(e.target.value)}
+            placeholder="Ej: Juan Pérez"
           />
         </div>
-  
-        {/* Tabla de empleados */}
-        <div className="overflow-auto rounded border border-gray-200">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-100 text-gray-700 font-semibold">
-              <tr>
-                <th className="p-3">Documento</th>
-                <th className="p-3">Nombre</th>
-                <th className="p-3">Cargo</th>
-                <th className="p-3">Empresa</th>
-                <th className="p-3">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[1, 2, 3].map((_, idx) => (
-                <tr key={idx} className="border-t hover:bg-gray-50">
-                  <td className="p-3">123456789</td>
-                  <td className="p-3">Juan Pérez</td>
-                  <td className="p-3">Operario</td>
-                  <td className="p-3">Holding VML</td>
-                  <td className="p-3">
-                    <button className="bg-primario hover:bg-hover text-white px-3 py-1 rounded text-sm">
-                      ➕ Agregar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+        {/* Documento */}
+        <div>
+          <label className="block font-semibold text-sm mb-1">Documento</label>
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            value={documentoEmpleado}
+            onChange={e => setDocumentoEmpleado(e.target.value)}
+            placeholder="Ej: 1234567890"
+          />
         </div>
-  
-        {/* Formulario de asignación de dotación */}
-        <div className="mt-8 border-t pt-6">
-          <h3 className="text-lg font-semibold text-primario mb-4">
-            Asignar dotación a: <span className="text-secundario">Juan Pérez</span>
-          </h3>
-  
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block font-semibold text-sm mb-1">Elemento de Dotación</label>
-              <select className="w-full border border-gray-300 rounded px-3 py-2">
-                <option>Seleccione elemento</option>
-                <option>Camisa</option>
-                <option>Pantalón</option>
-                <option>Botas</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-semibold text-sm mb-1">Talla</label>
-              <select className="w-full border border-gray-300 rounded px-3 py-2">
-                <option>Seleccione talla</option>
-                <option>S</option>
-                <option>M</option>
-                <option>L</option>
-                <option>XL</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-semibold text-sm mb-1">Cantidad</label>
-              <input
-                type="number"
-                min={1}
-                className="w-full border border-gray-300 rounded px-3 py-2"
-                placeholder="0"
-              />
-            </div>
-          </div>
-  
-          <div className="text-right">
-            <button className="bg-primario hover:bg-hover text-white px-4 py-2 rounded text-sm">
-              ➕ Agregar Prenda
-            </button>
-          </div>
-        </div>
-  
       </div>
-    );
-  }
-  
-  export default NuevaSolicitud;
-  
+    </div>
+  )
+}
+
+export default NuevaSolicitud

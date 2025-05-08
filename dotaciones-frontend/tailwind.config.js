@@ -6,25 +6,22 @@ export default {
   ],
   theme: {
     extend: {
+      colors: {
+        primario: '#003b73',
+        secundario: '#0074cc',
+        hover: '#005fa3',
+      },
       animation: {
-        fadeIn: "fadeIn 1s ease-out",
-        fadeInSlow: "fadeIn 1.8s ease-out",
+        fadeIn: 'fadeIn 0.8s ease-out',
       },
       keyframes: {
         fadeIn: {
-          "0%": { opacity: 0, transform: "translateY(-10px)" },
-          "100%": { opacity: 1, transform: "translateY(0)" },
-        }
-      },
-      colors: {
-        primario: "#2c3e50",     // Azul corporativo VML
-        secundario: "#e74c3c",   // Rojo VML
-        hover: "#2980b9",        // Hover azul más oscuro
-      },
-      fontFamily: {
-        sans: ["Open Sans", "sans-serif"],
+          '0%': { opacity: 0, transform: 'translateY(15px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' },
+        },
       },
     },
   },
   plugins: [],
 }
+

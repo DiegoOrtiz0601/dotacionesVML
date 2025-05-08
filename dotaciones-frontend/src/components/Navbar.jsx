@@ -7,7 +7,8 @@ function Navbar() {
   const dropdownRef = useRef(null)
 
   const usuario = JSON.parse(localStorage.getItem('usuario')) || {}
-  const nombre = usuario?.usuario || 'Usuario'
+  const nombre = usuario?.NombreUsuario || 'Usuario';
+
 
   const toggleDropdown = () => setOpen(!open)
   const cerrarSesion = () => {

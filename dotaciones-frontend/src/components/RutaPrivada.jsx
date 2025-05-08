@@ -1,20 +1,28 @@
 import { Navigate } from 'react-router-dom'
 
 function RutaPrivada({ children, rolPermitido = 'usuario' }) {
-  const token = localStorage.getItem('access_token')
-  const usuario = JSON.parse(localStorage.getItem('usuario'))
+  const token = localStorage.getItem('access_token');
 
-  // Si no hay token o no hay usuario → redirige al login
+  let usuario = null;
+  try {
+    const raw = localStorage.getItem('usuario');
+    usuario = raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.error("Error al parsear usuario:", err);
+  }
+
+  // Si no hay token o usuario, redirige
   if (!token || !usuario) {
     return <Navigate to="/login" replace />
   }
 
-  // Si el rol no es permitido → también redirige al login o a error 403
-  if (usuario.rol !== rolPermitido) {
+  // Valida rol con la propiedad correcta
+  if (usuario.RolUsuario !== rolPermitido) {
     return <Navigate to="/login" replace />
   }
 
-  return children
+  return children;
 }
+
 
 export default RutaPrivada

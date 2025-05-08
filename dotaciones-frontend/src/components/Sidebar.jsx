@@ -1,21 +1,27 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom';
 
 function Sidebar() {
-  const location = useLocation()
-  const usuario = JSON.parse(localStorage.getItem('usuario'))
+  const location = useLocation();
+  const usuario = JSON.parse(localStorage.getItem('usuario'));
 
-  // Solo mostrar si está autenticado y es del rol 'usuario'
-  if (!usuario || usuario.rol !== 'usuario') {
-    return null
+  if (!usuario || !usuario.RolUsuario) {
+    return null;
   }
 
-  const links = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/nueva-solicitud', label: 'Crear Solicitud', icon: '📝' },
-    { path: '/solicitudes', label: 'Mis Solicitudes', icon: '📄' },
-    { path: '/entregas', label: 'Entrega de Dotación', icon: '🎯' },
-    { path: '/configuracion', label: 'Configuración', icon: '⚙️' },
-  ]
+  const links = [];
+
+  // Menú para rol 'usuario'
+  if (usuario.RolUsuario === 'usuario') {
+    links.push(
+      { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+      { path: '/nueva-solicitud', label: 'Crear Solicitud', icon: '📝' },
+      { path: '/solicitudes', label: 'Mis Solicitudes', icon: '📄' },
+      { path: '/entregas', label: 'Entrega de Dotación', icon: '🎯' },
+      { path: '/configuracion', label: 'Configuración', icon: '⚙️' }
+    );
+  }
+
+  // Aquí puedes añadir otros menús para roles como 'admin', 'revisor', etc.
 
   return (
     <aside className="w-64 bg-primario text-white min-h-screen fixed p-6 shadow-xl">
@@ -35,7 +41,7 @@ function Sidebar() {
         ))}
       </nav>
     </aside>
-  )
+  );
 }
 
-export default Sidebar
+export default Sidebar;

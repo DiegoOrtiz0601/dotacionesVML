@@ -13,13 +13,17 @@ function Login() {
         NombreUsuario: usuario, 
         PasswordUsuario: contrasena 
       });
+  
+      console.log('👤 Usuario autenticado:', response.data.user); // ← AQUI
+  
       localStorage.setItem('access_token', response.data.access_token);
-      localStorage.setItem('usuario', JSON.stringify(response.data.usuario));
-      window.location.href = '/dashboard';
+      localStorage.setItem('usuario', JSON.stringify(response.data.user));
+  
+      window.location.href = '/dashboard'; // ← esto recarga la página y borra los logs
     } catch (err) {
       setError('❌ Credenciales inválidas o error de conexión');
     }
-  }
+  };
   
 
   return (
