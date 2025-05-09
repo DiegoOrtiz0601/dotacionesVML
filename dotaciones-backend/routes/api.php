@@ -16,6 +16,8 @@ use App\Http\Controllers\TblDetalleSolicitudEmpleadoController;
 use App\Http\Controllers\TblElementoController;
 use App\Http\Controllers\TblTallaElementoController;
 use App\Http\Controllers\TblDetalleSolicitudElementoController;
+use App\Http\Controllers\TblSolicitudEmpleadoController;
+use App\Http\Controllers\ElementosDotacionController;
 
 // ✅ Ruta de login debe estar FUERA del middleware
 Route::post('/login', [AuthController::class, 'login']);
@@ -43,5 +45,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('auth:sanctum')->get('/cargos-por-empresa-sede', [TblUsuarioEmpresaSedeController::class, 'getCargosPorEmpresaYSede']);
     Route::get('/mis-empresas-sedes', [TblUsuarioEmpresaSedeController::class, 'getEmpresasYSedes']);
     Route::get('/tipo-solicitud', [TblTipoSolicitudController::class, 'getTiposSolicitud']);
+    Route::post('/agregar-empleado', [TblSolicitudEmpleadoController::class, 'agregarEmpleado']);
+    Route::get('/historial-solicitudes', [TblSolicitudEmpleadoController::class, 'historialSolicitudes']);
+    Route::get('/elementos-dotacion', [ElementosDotacionController::class, 'obtenerElementos']);
+
 
 });

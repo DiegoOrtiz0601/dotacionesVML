@@ -2,11 +2,18 @@
 
 return [
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => [
+        'api/*',
+        'sanctum/csrf-cookie',
+        'login',
+        'logout',
+    ],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'], // ← esto es lo que permite todos los puertos (5173, 5174, etc)
+    'allowed_origins' => [
+        'http://localhost:5173', // Vite dev server
+    ],
 
     'allowed_origins_patterns' => [],
 
@@ -16,6 +23,5 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
-
+    'supports_credentials' => true, // ✅ NECESARIO para cookies de sesión con Sanctum
 ];
