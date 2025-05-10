@@ -1,18 +1,40 @@
 import { useEffect, useState } from 'react'
 import api from '../../../api/axios'
 
-const PasoAgregarEmpleados = ({ idSolicitud, empresa, sede, onContinue, onBack }) => {
+
+const PasoAgregarEmpleados = ({
+  idSolicitud,
+  empresa,
+  sede,
+  cargoSeleccionado,
+  setCargoSeleccionado,
+  onContinue,
+  onBack,
+  setEmpleadoActual // <- función para almacenar el empleado actual
+}) => {
   const [nombresEmpleado, setNombresEmpleado] = useState('')
   const [documentoEmpleado, setDocumentoEmpleado] = useState('')
-  const [cargoSeleccionado, setCargoSeleccionado] = useState('')
-  const [cargos, setCargos] = useState([])
-  const [idTipoSolicitudSeleccionado, setIdTipoSolicitudSeleccionado] = useState('')
+  const [tipoSolicitudSeleccionado, setTipoSolicitudSeleccionado] = useState('')
   const [tiposSolicitud, setTiposSolicitud] = useState([])
   const [historialSolicitudes, setHistorialSolicitudes] = useState([])
   const [observaciones, setObservaciones] = useState('')
   const [evidencias, setEvidencias] = useState([])
-  const [modalEvidencia, setModalEvidencia] = useState(null)
+  const [cargos, setCargos] = useState([])
 
+  // Carga tipos de solicitud
+  useEffect(() => {
+    const cargarTipos = async () => {
+      try {
+        const response = await api.get('/tipo-solicitud')
+        setTiposSolicitud(response.data)
+      } catch (error) {
+        console.error('Error cargando tipos de solicitud:', error)
+      }
+    }
+    cargarTipos()
+  }, [])
+
+  // Carga cargos según empresa y sede
   useEffect(() => {
     const cargarCargos = async () => {
       if (empresa && sede) {
@@ -29,21 +51,10 @@ const PasoAgregarEmpleados = ({ idSolicitud, empresa, sede, onContinue, onBack }
     cargarCargos()
   }, [empresa, sede])
 
-  useEffect(() => {
-    const cargarTipos = async () => {
-      try {
-        const response = await api.get('/tipo-solicitud')
-        setTiposSolicitud(response.data)
-      } catch (error) {
-        console.error('Error cargando tipos de solicitud:', error)
-      }
-    }
-    cargarTipos()
-  }, [])
-
+  // Carga historial si aplica
   useEffect(() => {
     const consultarHistorial = async () => {
-      if (idTipoSolicitudSeleccionado && idTipoSolicitudSeleccionado !== 1 && documentoEmpleado) {
+      if (tipoSolicitudSeleccionado !== '1' && documentoEmpleado) {
         try {
           const response = await api.get('/historial-solicitudes', {
             params: { documento: documentoEmpleado }
@@ -57,83 +68,75 @@ const PasoAgregarEmpleados = ({ idSolicitud, empresa, sede, onContinue, onBack }
       }
     }
     consultarHistorial()
-  }, [idTipoSolicitudSeleccionado, documentoEmpleado])
+  }, [tipoSolicitudSeleccionado, documentoEmpleado])
 
   const manejarArchivo = (e) => {
     const files = Array.from(e.target.files)
-    const validFiles = files.filter(file => {
-      const maxSize = 5 * 1024 * 1024
-      const validTypes = ['image/jpeg', 'image/png', 'application/pdf']
-      return validTypes.includes(file.type) && file.size <= maxSize
+    const archivosValidos = files.filter(file => {
+      const esFormatoValido = ['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)
+      const esTamanioValido = file.size <= 5 * 1024 * 1024
+      return esFormatoValido && esTamanioValido
     })
-    setEvidencias(prev => [...prev, ...validFiles])
+    setEvidencias(prev => [...prev, ...archivosValidos])
   }
 
   const eliminarArchivo = (nombre) => {
     setEvidencias(prev => prev.filter(file => file.name !== nombre))
   }
 
-  const visualizarArchivo = (file) => {
-    const url = URL.createObjectURL(file)
-    setModalEvidencia(url)
-  }
-
-  // Validación en tiempo real: solo letras y espacios, y convertir a mayúsculas
-  const handleNombreChange = (e) => {
-    const valor = e.target.value.toUpperCase()
-    if (/^[A-ZÀ-Ÿ\s]*$/.test(valor)) {
-      setNombresEmpleado(valor)
+  const continuar = () => {
+    const datosEmpleado = {
+      nombresEmpleado,
+      documentoEmpleado,
+      tipoSolicitud: tipoSolicitudSeleccionado,
+      cargo: cargoSeleccionado,
+      observaciones,
+      evidencias
     }
-  }
 
-  // Validación en tiempo real: solo números
-  const handleDocumentoChange = (e) => {
-    const valor = e.target.value
-    if (/^\d*$/.test(valor)) {
-      setDocumentoEmpleado(valor)
+    if (setEmpleadoActual) {
+      setEmpleadoActual(datosEmpleado)
     }
-  }
 
-  const esValido = () => {
-    return (
-      nombresEmpleado.trim() !== '' &&
-      documentoEmpleado.trim() !== '' &&
-      cargoSeleccionado &&
-      idTipoSolicitudSeleccionado
-    )
+    onContinue()
   }
 
   return (
     <div>
-      <h3 className="text-lg font-bold mb-4">Agregar empleado a la solicitud</h3>
+      <h3 className="text-lg font-bold mb-4">Agregar Empleado a la Solicitud</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label className="block font-semibold text-sm mb-1">Nombres y apellidos</label>
           <input
             type="text"
-            className="w-full border border-gray-300 rounded px-3 py-2"
             value={nombresEmpleado}
-            onChange={handleNombreChange}
+            onChange={(e) => {
+              const soloTexto = e.target.value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ\s]/g, '')
+              setNombresEmpleado(soloTexto)
+            }}
+            className="w-full border border-gray-300 rounded px-3 py-2"
           />
         </div>
-
         <div>
           <label className="block font-semibold text-sm mb-1">Documento</label>
           <input
             type="text"
-            className="w-full border border-gray-300 rounded px-3 py-2"
             value={documentoEmpleado}
-            onChange={handleDocumentoChange}
+            onChange={(e) => {
+              const soloNumeros = e.target.value.replace(/\D/g, '')
+              setDocumentoEmpleado(soloNumeros)
+            }}
+            className="w-full border border-gray-300 rounded px-3 py-2"
           />
         </div>
 
         <div>
           <label className="block font-semibold text-sm mb-1">Cargo</label>
           <select
-            className="w-full border border-gray-300 rounded px-3 py-2"
             value={cargoSeleccionado}
-            onChange={e => setCargoSeleccionado(e.target.value)}
+            onChange={(e) => setCargoSeleccionado(e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-2"
           >
             <option value="">Seleccione cargo</option>
             {cargos.map(c => (
@@ -145,9 +148,9 @@ const PasoAgregarEmpleados = ({ idSolicitud, empresa, sede, onContinue, onBack }
         <div>
           <label className="block font-semibold text-sm mb-1">Tipo de solicitud</label>
           <select
+            value={tipoSolicitudSeleccionado}
+            onChange={(e) => setTipoSolicitudSeleccionado(e.target.value)}
             className="w-full border border-gray-300 rounded px-3 py-2"
-            value={idTipoSolicitudSeleccionado}
-            onChange={e => setIdTipoSolicitudSeleccionado(Number(e.target.value))}
           >
             <option value="">Seleccione tipo</option>
             {tiposSolicitud.map(tipo => (
@@ -157,7 +160,7 @@ const PasoAgregarEmpleados = ({ idSolicitud, empresa, sede, onContinue, onBack }
         </div>
       </div>
 
-      {idTipoSolicitudSeleccionado && idTipoSolicitudSeleccionado !== 1 && (
+      {tipoSolicitudSeleccionado && tipoSolicitudSeleccionado !== '1' && (
         <>
           <div className="mb-4">
             <label className="block font-semibold text-sm mb-1">Historial de solicitudes</label>
@@ -177,16 +180,16 @@ const PasoAgregarEmpleados = ({ idSolicitud, empresa, sede, onContinue, onBack }
           <div className="mb-4">
             <label className="block font-semibold text-sm mb-1">Observaciones</label>
             <textarea
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              rows="3"
               value={observaciones}
               onChange={e => setObservaciones(e.target.value)}
-              placeholder="Observaciones relevantes para la solicitud..."
+              className="w-full border border-gray-300 rounded px-3 py-2"
+              rows="3"
+              placeholder="Observaciones relevantes..."
             ></textarea>
           </div>
 
           <div className="mb-4">
-            <label className="block font-semibold text-sm mb-1">Evidencias</label>
+            <label className="block font-semibold text-sm mb-1">Evidencias (jpg, png, pdf)</label>
             <input
               type="file"
               multiple
@@ -194,19 +197,23 @@ const PasoAgregarEmpleados = ({ idSolicitud, empresa, sede, onContinue, onBack }
               accept=".jpg,.jpeg,.png,.pdf"
               className="block w-full text-sm text-gray-600"
             />
-            <ul className="mt-2">
+            <ul className="mt-2 space-y-1">
               {evidencias.map((file, idx) => (
-                <li key={idx} className="flex justify-between items-center">
+                <li key={idx} className="flex justify-between items-center text-sm">
                   <span>{file.name}</span>
                   <div>
                     <button
-                      onClick={() => visualizarArchivo(file)}
-                      className="text-blue-500 mr-2 hover:underline text-sm"
-                    >Ver</button>
-                    <button
                       onClick={() => eliminarArchivo(file.name)}
-                      className="text-red-500 hover:underline text-sm"
-                    >Eliminar</button>
+                      className="text-red-500 hover:underline mr-2"
+                    >
+                      Eliminar
+                    </button>
+                    <button
+                      onClick={() => window.open(URL.createObjectURL(file), '_blank')}
+                      className="text-blue-500 hover:underline"
+                    >
+                      Ver
+                    </button>
                   </div>
                 </li>
               ))}
@@ -215,28 +222,19 @@ const PasoAgregarEmpleados = ({ idSolicitud, empresa, sede, onContinue, onBack }
         </>
       )}
 
-      {modalEvidencia && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded shadow-xl max-w-2xl w-full relative">
-            <button
-              onClick={() => setModalEvidencia(null)}
-              className="absolute top-2 right-2 text-gray-600 hover:text-black"
-            >✖</button>
-            <iframe src={modalEvidencia} className="w-full h-[500px]" title="Evidencia" />
-          </div>
-        </div>
-      )}
-
       <div className="flex justify-between mt-6">
         <button
           onClick={onBack}
           className="bg-gray-300 text-gray-700 px-4 py-2 rounded"
-        >⬅️ Volver</button>
+        >
+          ⬅️ Volver
+        </button>
         <button
-          onClick={onContinue}
-          className={`px-4 py-2 rounded text-white ${esValido() ? 'bg-primario hover:bg-primario/90' : 'bg-gray-400 cursor-not-allowed'}`}
-          disabled={!esValido()}
-        >Siguiente ➡️</button>
+          onClick={continuar}
+          className="bg-primario text-white px-4 py-2 rounded"
+        >
+          Siguiente ➡️
+        </button>
       </div>
     </div>
   )
