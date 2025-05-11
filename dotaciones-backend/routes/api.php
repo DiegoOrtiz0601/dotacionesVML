@@ -48,6 +48,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/agregar-empleado', [TblSolicitudEmpleadoController::class, 'agregarEmpleado']);
     Route::get('/historial-solicitudes', [TblSolicitudEmpleadoController::class, 'historialSolicitudes']);
     Route::middleware('auth:sanctum')->get('/elementos-dotacion', [TblElementosDotacionController::class, 'obtenerElementos']);
+   Route::middleware('auth:sanctum')->get('/usuario-autenticado', [TblUsuarioSistemaController::class, 'datosAutenticado']);
+
 
 
 });

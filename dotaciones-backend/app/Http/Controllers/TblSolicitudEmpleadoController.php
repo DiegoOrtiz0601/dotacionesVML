@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class TblSolicitudEmpleadoController extends Controller
 {
@@ -58,13 +59,17 @@ class TblSolicitudEmpleadoController extends Controller
         ]);
     }
 
-    // Nuevo endpoint: historial de solicitudes por documento
+    // Endpoint para consultar historial por documento
     public function historialSolicitudes(Request $request)
     {
-        $documento = $request->query('documentoEmpleado');
+        $documento = $request->query('documento') ?? $request->query('documentoEmpleado');
+
+        Log::info('📥 Consultando historial para documento:', ['documento' => $documento]);
 
         if (!$documento) {
-            return response()->json(['error' => 'El documento del empleado es requerido'], 400);
+            return response()->json([
+                'error' => 'El documento del empleado es requerido'
+            ], 400);
         }
 
         $historial = DB::table('tbl_detalle_solicitud_empleado')

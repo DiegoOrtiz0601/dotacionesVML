@@ -11,8 +11,10 @@ const WizardSolicitudDotacion = () => {
   const [numeroSolicitud, setNumeroSolicitud] = useState('')
   const [empresa, setEmpresa] = useState('')
   const [sede, setSede] = useState('')
+  const [usuario, setUsuario] = useState(null)
   const [cargoSeleccionado, setCargoSeleccionado] = useState('')
   const [empleadoActual, setEmpleadoActual] = useState(null)
+  const [elementosEditados, setElementosEditados] = useState(null)
   const [resumenSolicitud, setResumenSolicitud] = useState([])
 
   const [empresas, setEmpresas] = useState([])
@@ -21,11 +23,15 @@ const WizardSolicitudDotacion = () => {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const response = await api.get('/mis-empresas-sedes')
-        setEmpresas(response.data.empresas)
-        setSedes(response.data.sedes)
+        const [empresaSedesRes, usuarioRes] = await Promise.all([
+          api.get('/mis-empresas-sedes'),
+          api.get('/usuario-autenticado')
+        ])
+        setEmpresas(empresaSedesRes.data.empresas)
+        setSedes(empresaSedesRes.data.sedes)
+        setUsuario(usuarioRes.data)
       } catch (error) {
-        console.error('Error cargando empresas y sedes:', error)
+        console.error('❌ Error cargando datos:', error)
       }
     }
     cargarDatos()
@@ -39,23 +45,42 @@ const WizardSolicitudDotacion = () => {
     const nuevoEmpleado = {
       ...empleadoActual,
       elementos
+      
     }
+    console.log('🧪 Elementos que se van al resumen:', elementos)
     setResumenSolicitud(prev => [...prev, nuevoEmpleado])
+    setElementosEditados(null)
   }
 
   const agregarOtroEmpleado = () => {
     setEmpleadoActual(null)
     setCargoSeleccionado('')
+    setElementosEditados(null)
     setPasoActual(2)
   }
 
+  const modificarEmpleado = (index) => {
+    const empleado = resumenSolicitud[index]
+    setEmpleadoActual(empleado)
+    setCargoSeleccionado(empleado.idCargo || '')
+    setElementosEditados(empleado.elementos || [])
+    setResumenSolicitud(prev => prev.filter((_, i) => i !== index))
+    setPasoActual(3)
+  }
+
+  const eliminarEmpleado = (index) => {
+    const nuevos = [...resumenSolicitud]
+    nuevos.splice(index, 1)
+    setResumenSolicitud(nuevos)
+  }
+
   const enviarSolicitudFinal = () => {
-    // 🔐 Aquí podrías hacer un POST al backend con todos los datos
     alert(`✅ Solicitud #${numeroSolicitud} enviada correctamente (función simulada).`)
     console.log({
       idSolicitud,
       empresa,
       sede,
+      usuario,
       resumenSolicitud
     })
   }
@@ -76,6 +101,7 @@ const WizardSolicitudDotacion = () => {
             setEmpresaSeleccionada={setEmpresa}
             sedeSeleccionada={sede}
             setSedeSeleccionada={setSede}
+            usuario={usuario}
             onContinue={(datos) => {
               setIdSolicitud(datos.idSolicitud)
               setNumeroSolicitud(datos.numeroSolicitud)
@@ -107,17 +133,20 @@ const WizardSolicitudDotacion = () => {
             onBack={irAlPasoAnterior}
             onAgregarOtroEmpleado={agregarOtroEmpleado}
             agregarEmpleadoAResumen={agregarEmpleadoAResumen}
+            elementosPrecargados={elementosEditados}
           />
         )}
       </div>
 
-      {/* RESUMEN VISUAL */}
       <ResumenSolicitud
         numeroSolicitud={numeroSolicitud}
         empresa={empresa}
         sede={sede}
+        usuario={usuario}
         resumenSolicitud={resumenSolicitud}
         onEnviarSolicitudFinal={enviarSolicitudFinal}
+        onModificarEmpleado={modificarEmpleado}
+        onEliminarEmpleado={eliminarEmpleado}
       />
     </>
   )

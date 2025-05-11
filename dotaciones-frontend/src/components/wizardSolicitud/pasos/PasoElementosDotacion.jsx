@@ -1,16 +1,35 @@
 import { useEffect, useState } from 'react'
 import api from '../../../api/axios'
 
-const PasoElementosDotacion = ({ idSolicitud, idEmpresa, idCargo, onBack, onAgregarOtroEmpleado, agregarEmpleadoAResumen }) => {
+const PasoElementosDotacion = ({
+  idSolicitud,
+  idEmpresa,
+  idCargo,
+  onBack,
+  onAgregarOtroEmpleado,
+  agregarEmpleadoAResumen,
+  elementosPrecargados = null
+}) => {
   const [elementos, setElementos] = useState([])
   const [seleccionados, setSeleccionados] = useState({})
 
   useEffect(() => {
     const cargarElementos = async () => {
       try {
+        const empresaId = typeof idEmpresa === 'object' ? idEmpresa.IdEmpresa : idEmpresa
+        const cargoId = typeof idCargo === 'object' ? idCargo.IdCargo : idCargo
+        
+if (!empresaId || !cargoId) {
+  console.warn('❌ idEmpresa o idCargo no definidos correctamente')
+  return
+}
         const response = await api.get('/elementos-dotacion', {
-          params: { idEmpresa, idCargo }
+          params: {
+            idEmpresa: empresaId,
+            idCargo: cargoId
+          }
         })
+
         setElementos(response.data)
       } catch (error) {
         console.error('Error cargando elementos de dotación:', error)
@@ -20,31 +39,51 @@ const PasoElementosDotacion = ({ idSolicitud, idEmpresa, idCargo, onBack, onAgre
     cargarElementos()
   }, [idEmpresa, idCargo])
 
+  useEffect(() => {
+    if (elementosPrecargados && elementos.length > 0) {
+      const precargadosMap = {}
+      elementosPrecargados.forEach(el => {
+        const elementoReal = elementos.find(e => Number(e.idElemento) === Number(el.idElemento))
+
+        precargadosMap[el.idElemento] = {
+          checked: true,
+          talla: el.talla,
+          cantidad: el.cantidad,
+          nombreElemento: elementoReal?.nombreElemento || el.nombreElemento || 'Elemento desconocido'
+        }
+      })
+      setSeleccionados(precargadosMap)
+    }
+  }, [elementosPrecargados, elementos])
+
   const manejarSeleccion = (idElemento, checked) => {
+    const id = Number(idElemento)
     setSeleccionados(prev => ({
       ...prev,
-      [idElemento]: {
-        ...prev[idElemento],
+      [id]: {
+        ...prev[id],
         checked
       }
     }))
   }
 
   const actualizarTalla = (idElemento, talla) => {
+    const id = Number(idElemento)
     setSeleccionados(prev => ({
       ...prev,
-      [idElemento]: {
-        ...prev[idElemento],
+      [id]: {
+        ...prev[id],
         talla
       }
     }))
   }
 
   const actualizarCantidad = (idElemento, cantidad) => {
+    const id = Number(idElemento)
     setSeleccionados(prev => ({
       ...prev,
-      [idElemento]: {
-        ...prev[idElemento],
+      [id]: {
+        ...prev[id],
         cantidad
       }
     }))
@@ -54,26 +93,26 @@ const PasoElementosDotacion = ({ idSolicitud, idEmpresa, idCargo, onBack, onAgre
     const elementosFinales = Object.entries(seleccionados)
       .filter(([_, val]) => val.checked && val.talla && val.cantidad)
       .map(([idElemento, val]) => {
-        const nombreElemento = elementos.find(e => e.idElemento === parseInt(idElemento))?.nombreElemento
+        const id = Number(idElemento)
+        const elementoRef = elementos.find(e => Number(e.idElemento) === id)
+        const nombreElemento = elementoRef?.nombreElemento || val.nombreElemento || 'Elemento no encontrado'
+
         return {
-          idElemento: parseInt(idElemento),
+          idElemento: id,
           nombreElemento,
           talla: val.talla,
           cantidad: val.cantidad
         }
       })
 
+    console.log('🧪 Elementos agregados al resumen:', elementosFinales)
+
     if (elementosFinales.length === 0) {
       alert('⚠️ Debes seleccionar al menos un elemento con talla y cantidad.')
       return
     }
 
-    if (typeof agregarEmpleadoAResumen === 'function') {
-      agregarEmpleadoAResumen(elementosFinales)
-    } else {
-      console.error('❌ agregarEmpleadoAResumen no es una función válida')
-      return
-    }
+    agregarEmpleadoAResumen(elementosFinales)
 
     if (confirm('¿Deseas agregar otro empleado?')) {
       onAgregarOtroEmpleado()
@@ -86,8 +125,8 @@ const PasoElementosDotacion = ({ idSolicitud, idEmpresa, idCargo, onBack, onAgre
     <div>
       <h3 className="text-lg font-bold mb-4">Agregar Elementos de Dotación</h3>
 
-      {elementos.map((elemento, index) => (
-        <div key={index} className="border p-4 mb-2 rounded shadow-sm">
+      {elementos.map((elemento) => (
+        <div key={elemento.idElemento} className="border p-4 mb-2 rounded shadow-sm">
           <label className="flex items-center space-x-3">
             <input
               type="checkbox"
@@ -103,10 +142,11 @@ const PasoElementosDotacion = ({ idSolicitud, idEmpresa, idCargo, onBack, onAgre
                 <label className="block text-sm">Talla</label>
                 <select
                   className="w-full border px-2 py-1"
+                  value={seleccionados[elemento.idElemento]?.talla || ''}
                   onChange={(e) => actualizarTalla(elemento.idElemento, e.target.value)}
                 >
                   <option value="">Seleccione talla</option>
-                  {elemento.tallas.split(',').map((talla, i) => (
+                  {elemento.tallas?.split(',').map((talla, i) => (
                     <option key={i} value={talla.trim()}>{talla.trim()}</option>
                   ))}
                 </select>
@@ -118,6 +158,7 @@ const PasoElementosDotacion = ({ idSolicitud, idEmpresa, idCargo, onBack, onAgre
                   type="number"
                   min="1"
                   className="w-full border px-2 py-1"
+                  value={seleccionados[elemento.idElemento]?.cantidad || ''}
                   onChange={(e) => actualizarCantidad(elemento.idElemento, e.target.value)}
                 />
               </div>
@@ -144,4 +185,4 @@ const PasoElementosDotacion = ({ idSolicitud, idEmpresa, idCargo, onBack, onAgre
   )
 }
 
-export default PasoElementosDotacion;
+export default PasoElementosDotacion

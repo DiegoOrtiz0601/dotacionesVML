@@ -47,4 +47,21 @@ class TblUsuarioSistemaController extends Controller
         $registro->delete();
         return response()->json(null, 204);
     }
+   public function datosAutenticado(Request $request)
+{
+    $usuario = $request->user();
+
+    if (!$usuario) {
+        return response()->json(['message' => 'No autenticado'], 401);
+    }
+
+    return response()->json([
+        'idUsuario' => $usuario->idUsuario ?? $usuario->id ?? null,
+        'nombre' => $usuario->NombresUsuarioAutorizado ?? '',
+        'documento' => $usuario->DocumentoUsuario ?? '',
+        'correo' => $usuario->CorreoSolicitante ?? '',
+        'cargo' => $usuario->CargoSolicitante ?? '',
+    ]);
+}
+
 }

@@ -8,6 +8,7 @@ function PasoSeleccionEmpresaSede({
   setEmpresaSeleccionada,
   sedeSeleccionada,
   setSedeSeleccionada,
+  usuario, // ✅ nuevo
   onContinue
 }) {
   const [loading, setLoading] = useState(false)
@@ -25,12 +26,16 @@ function PasoSeleccionEmpresaSede({
       const response = await api.get('/generar-numero-solicitud')
       const { idSolicitud, numeroSolicitud } = response.data
 
-      // Devuelve ambos datos al Wizard
+      const empresaObj = empresas.find(e => e.IdEmpresa == empresaSeleccionada)
+      const sedeObj = sedes.find(s => s.IdSede == sedeSeleccionada)
+
+      // ✅ Enviamos objetos completos y usuario
       onContinue({
         idSolicitud,
         numeroSolicitud,
-        empresaSeleccionada,
-        sedeSeleccionada
+        empresaSeleccionada: empresaObj,
+        sedeSeleccionada: sedeObj,
+        usuario
       })
     } catch (error) {
       console.error('❌ Error generando número de solicitud:', error)
