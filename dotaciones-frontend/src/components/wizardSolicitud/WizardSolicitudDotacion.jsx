@@ -3,32 +3,29 @@ import PasoSeleccionEmpresaSede from './pasos/PasoSeleccionEmpresaSede'
 import PasoAgregarEmpleados from './pasos/PasoAgregarEmpleados'
 import PasoElementosDotacion from './pasos/PasoElementosDotacion'
 import ResumenSolicitud from './ResumenSolicitud'
+import Loader from '../Loader'
+
 import api from '../../api/axios'
 
 const WizardSolicitudDotacion = () => {
-  // Estados de navegación del wizard
+  const [cargando, setCargando] = useState(false)
   const [pasoActual, setPasoActual] = useState(1)
 
-  // Estado para manejar ID real (PK autoincremental) y número visual (DOT-000X)
   const [idSolicitud, setIdSolicitud] = useState(null)
   const [numeroSolicitud, setNumeroSolicitud] = useState('')
 
-  // Estado para datos básicos
   const [empresa, setEmpresa] = useState(null)
   const [sede, setSede] = useState(null)
   const [usuario, setUsuario] = useState(null)
 
-  // Estado para empleados y dotaciones
   const [cargoSeleccionado, setCargoSeleccionado] = useState('')
   const [empleadoActual, setEmpleadoActual] = useState(null)
   const [elementosEditados, setElementosEditados] = useState(null)
   const [resumenSolicitud, setResumenSolicitud] = useState([])
 
-  // Listados globales
   const [empresas, setEmpresas] = useState([])
   const [sedes, setSedes] = useState([])
 
-  // Cargar datos iniciales del usuario autenticado y sus empresas/sedes
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -39,6 +36,7 @@ const WizardSolicitudDotacion = () => {
         setEmpresas(empresaSedesRes.data.empresas)
         setSedes(empresaSedesRes.data.sedes)
         setUsuario(usuarioRes.data)
+        console.log('✅ Usuario y empresas cargadas:', usuarioRes.data)
       } catch (error) {
         console.error('❌ Error cargando datos:', error)
       }
@@ -46,22 +44,20 @@ const WizardSolicitudDotacion = () => {
     cargarDatos()
   }, [])
 
-  // Paso siguiente/anterior
   const irAlSiguientePaso = () => setPasoActual(prev => prev + 1)
   const irAlPasoAnterior = () => setPasoActual(prev => prev - 1)
 
-  // Guardar empleado con sus elementos asignados
   const agregarEmpleadoAResumen = (elementos) => {
     if (!empleadoActual) return
     const nuevoEmpleado = {
       ...empleadoActual,
       elementos
     }
+    console.log('📌 Empleado agregado con elementos:', nuevoEmpleado)
     setResumenSolicitud(prev => [...prev, nuevoEmpleado])
     setElementosEditados(null)
   }
 
-  // Volver al paso 2 a agregar otro empleado
   const agregarOtroEmpleado = () => {
     setEmpleadoActual(null)
     setCargoSeleccionado('')
@@ -69,7 +65,6 @@ const WizardSolicitudDotacion = () => {
     setPasoActual(2)
   }
 
-  // Modificar empleado ya agregado
   const modificarEmpleado = (index) => {
     const empleado = resumenSolicitud[index]
     setEmpleadoActual(empleado)
@@ -79,78 +74,116 @@ const WizardSolicitudDotacion = () => {
     setPasoActual(3)
   }
 
-  // Eliminar empleado de la lista
   const eliminarEmpleado = (index) => {
     const nuevos = [...resumenSolicitud]
     nuevos.splice(index, 1)
     setResumenSolicitud(nuevos)
   }
 
-  // Enviar la solicitud final con todos los empleados
   const enviarSolicitudFinal = async () => {
-    try {
-      // 1️⃣ Se guarda la solicitud y se obtiene el ID real y el número DOT-000X
-      const response = await api.post('/solicitudes', {
-        idUsuario: usuario.idUsuario,
-        idEmpresa: empresa.IdEmpresa,
-        idSede: sede.IdSede,
-        estadoSolicitud: 'En revisión',
-        fechaSolicitud: new Date().toISOString()
-      })
+  console.log('🔥 Iniciando envío de solicitud')
+  setCargando(true)
 
-      const idSol = response.data.id         // ← FK real para detalle
-      const numeroSol = response.data.idSolicitud  // ← visible al usuario
+  try {
+    const response = await api.post('/solicitudes', {
+      idUsuario: usuario.idUsuario,
+      idEmpresa: empresa.IdEmpresa,
+      idSede: sede.IdSede,
+      estadoSolicitud: 'En revisión',
+      fechaSolicitud: new Date().toISOString()
+    })
 
-      setIdSolicitud(idSol)
-      setNumeroSolicitud(numeroSol)
+    const idSol = response.data.id
+    const numeroSol = response.data.idSolicitud
 
-      // 2️⃣ Se guarda cada empleado con sus datos vinculados a la solicitud
-      for (const emp of resumenSolicitud) {
-        try {
-          await api.post('/detalle-solicitud-empleado', {
-            idSolicitud: idSol, // ← FK a tbl_solicitudes (campo id)
-            nombresEmpleado: emp.nombresEmpleado,
-            documentoEmpleado: emp.documentoEmpleado,
-            idCargo: emp.idCargo,
-            idTipoSolicitud: emp.IdTipoSolicitud,
-            observaciones: emp.observaciones || '',
-            EstadoSolicitudEmpleado: 'En revisión',
-          })
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`📋 Solicitud creada con ID: ${idSol}, Número: ${numeroSol}`)
+    }
 
-          // 3️⃣ Si hay evidencias (y tipo ≠ 1), se suben
-          if (
-            emp.evidencias &&
-            emp.evidencias.length > 0 &&
-            emp.IdTipoSolicitud !== 1
-          ) {
-            for (const evidencia of emp.evidencias) {
-              const formData = new FormData()
-              formData.append('idSolicitud', idSol)
-              formData.append('documentoEmpleado', emp.documentoEmpleado)
-              formData.append('nombreEmpresa', empresa.NombreEmpresa)
-              formData.append('archivo', evidencia)
+    setIdSolicitud(idSol)
+    setNumeroSolicitud(numeroSol)
 
+    for (const emp of resumenSolicitud) {
+      try {
+        console.log('👤 Guardando empleado:', emp.nombresEmpleado)
+
+        const responseDetalle = await api.post('/detalle-solicitud-empleado', {
+          idSolicitud: idSol,
+          nombresEmpleado: emp.nombresEmpleado,
+          documentoEmpleado: emp.documentoEmpleado,
+          idCargo: emp.idCargo,
+          idTipoSolicitud: emp.IdTipoSolicitud,
+          observaciones: emp.observaciones || '',
+          EstadoSolicitudEmpleado: 'En revisión',
+        })
+
+        const idDetalleSolicitud = responseDetalle.data.idDetalleSolicitud
+        emp.idDetalleSolicitud = idDetalleSolicitud
+
+        console.log(`📌 Empleado guardado con ID detalle: ${idDetalleSolicitud}`)
+
+        // Guardar elementos
+        if (Array.isArray(emp.elementos) && emp.elementos.length > 0) {
+          const peticionesElementos = emp.elementos.map((elemento) =>
+            api.post('/detalle-solicitud-elemento', {
+              idDetalleSolicitud,
+              idElemento: elemento.idElemento,
+              TallaElemento: elemento.talla,
+              Cantidad: elemento.cantidad
+            }).catch(err => {
+              console.error(`❌ Error guardando elemento ${elemento.nombreElemento}:`, err.response?.data || err)
+            })
+          )
+          await Promise.all(peticionesElementos)
+          console.log(`🧾 Se registraron ${emp.elementos.length} elementos para ${emp.nombresEmpleado}`)
+        }
+
+        // Guardar evidencias (si aplica)
+        if (emp.evidencias && emp.evidencias.length > 0 && emp.IdTipoSolicitud !== 1) {
+          for (const evidencia of emp.evidencias) {
+            const formData = new FormData()
+            formData.append('idSolicitud', idSol)
+            formData.append('documentoEmpleado', emp.documentoEmpleado)
+            formData.append('nombreEmpresa', empresa.NombreEmpresa)
+            formData.append('archivo', evidencia)
+
+            try {
               await api.post('/guardar-evidencia', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
               })
+              console.log(`📁 Evidencia cargada para ${emp.nombresEmpleado}: ${evidencia.name}`)
+            } catch (err) {
+              console.error(`❌ Error subiendo evidencia ${evidencia.name}:`, err.response?.data || err)
             }
           }
-        } catch (error) {
-          console.error('🛑 Error detalle empleado:', error.response?.data || error)
-          alert('🛑 Error guardando un empleado:\n' + JSON.stringify(error.response?.data?.errors, null, 2))
-          return
         }
+
+      } catch (error) {
+        console.error(`🛑 Error con el empleado ${emp.nombresEmpleado}:`, error.response?.data || error)
+        alert(`🛑 Error guardando empleado ${emp.nombresEmpleado}:\n` + JSON.stringify(error.response?.data?.errors, null, 2))
+        // Continúa con el siguiente empleado
       }
-
-      // 4️⃣ Confirmación final
-      alert(`✅ Solicitud #${numeroSol} enviada correctamente.`)
-    } catch (error) {
-      console.error('❌ Error global al guardar la solicitud:', error.response?.data || error)
-      alert('❌ Error global:\n' + JSON.stringify(error.response?.data?.errors, null, 2))
     }
-  }
 
-  // Render del wizard paso a paso
+    alert(`✅ Solicitud #${numeroSol} enviada correctamente.`)
+
+  } catch (error) {
+    console.error('❌ Error global al guardar la solicitud:', error.response?.data || error)
+    alert('❌ Error global:\n' + JSON.stringify(error.response?.data?.errors, null, 2))
+  } finally {
+    // Resetear el formulario
+    setResumenSolicitud([])
+    setEmpleadoActual(null)
+    setElementosEditados(null)
+    setCargoSeleccionado('')
+    setIdSolicitud(null)
+    setNumeroSolicitud('')
+    setPasoActual(1)
+    setCargando(false)
+  }
+}
+
+
   return (
     <>
       <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -168,12 +201,7 @@ const WizardSolicitudDotacion = () => {
             sedeSeleccionada={sede}
             setSedeSeleccionada={setSede}
             usuario={usuario}
-            onContinue={({
-              idSolicitud,           // ← id real (autoincremental)
-              numeroSolicitud,       // ← visible tipo DOT-0001
-              empresaSeleccionada,
-              sedeSeleccionada
-            }) => {
+            onContinue={({ idSolicitud, numeroSolicitud, empresaSeleccionada, sedeSeleccionada }) => {
               setIdSolicitud(idSolicitud)
               setNumeroSolicitud(numeroSolicitud)
               setEmpresa(empresaSeleccionada)
@@ -198,7 +226,6 @@ const WizardSolicitudDotacion = () => {
 
         {pasoActual === 3 && (
           <PasoElementosDotacion
-            idSolicitud={idSolicitud}
             idEmpresa={empresa?.IdEmpresa}
             idCargo={cargoSeleccionado}
             onBack={irAlPasoAnterior}
@@ -209,7 +236,6 @@ const WizardSolicitudDotacion = () => {
         )}
       </div>
 
-      {/* Resumen general al final del wizard */}
       <ResumenSolicitud
         numeroSolicitud={numeroSolicitud}
         empresa={empresa}
@@ -220,6 +246,7 @@ const WizardSolicitudDotacion = () => {
         onModificarEmpleado={modificarEmpleado}
         onEliminarEmpleado={eliminarEmpleado}
       />
+      {cargando && <Loader />}
     </>
   )
 }

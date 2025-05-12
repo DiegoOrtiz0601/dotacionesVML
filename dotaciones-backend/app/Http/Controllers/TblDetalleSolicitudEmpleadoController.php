@@ -11,8 +11,7 @@ class TblDetalleSolicitudEmpleadoController extends Controller
     {
         return response()->json(TblDetalleSolicitudEmpleado::all());
     }
-
-    public function store(Request $request)
+public function store(Request $request)
 {
     $validated = $request->validate([
         'idSolicitud'             => 'required|exists:tbl_solicitudes,idSolicitud',
@@ -25,7 +24,11 @@ class TblDetalleSolicitudEmpleadoController extends Controller
     ]);
 
     $registro = TblDetalleSolicitudEmpleado::create($validated);
-    return response()->json($registro, 201);
+
+    return response()->json([
+        'message' => 'Detalle guardado exitosamente',
+        'idDetalleSolicitud' => $registro->idDetalleSolicitud
+    ], 201);
 }
 
     public function show($id)

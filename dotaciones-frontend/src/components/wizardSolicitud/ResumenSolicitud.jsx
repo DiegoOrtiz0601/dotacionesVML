@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 
 function ResumenSolicitud({
@@ -13,8 +13,14 @@ function ResumenSolicitud({
 }) {
   const [archivoModal, setArchivoModal] = useState(null)
 
-  const nombreEmpresa = typeof empresa === 'object' ? empresa?.NombreEmpresa || empresa?.nombre : empresa
-  const nombreSede = typeof sede === 'object' ? sede?.NombreSede || sede?.nombre : sede
+  const nombreEmpresa = useMemo(() => {
+    return typeof empresa === 'object' ? empresa?.NombreEmpresa || empresa?.nombre : empresa
+  }, [empresa])
+
+  const nombreSede = useMemo(() => {
+    return typeof sede === 'object' ? sede?.NombreSede || sede?.nombre : sede
+  }, [sede])
+
   const logoUrl = empresa?.ruta_logo ? `${empresa.ruta_logo}` : null
   const fechaActual = dayjs().format('DD/MM/YYYY')
 
@@ -37,7 +43,7 @@ function ResumenSolicitud({
           </div>
         </div>
 
-        {/* Información de usuario */}
+        {/* Información del usuario */}
         <div className="mb-6 text-sm">
           <p><strong>Responsable:</strong> {usuario?.nombre}</p>
           <p><strong>Documento:</strong> {usuario?.documento}</p>
@@ -83,7 +89,7 @@ function ResumenSolicitud({
                 </summary>
 
                 <ul className="list-disc ml-5 mt-2 text-sm text-gray-700">
-                  {emp.elementos.map((el, i) => (
+                  {emp.elementos?.map((el, i) => (
                     <li key={i}>
                       {(el.nombreElemento || 'Elemento desconocido')} — Talla: <strong>{el.talla}</strong>, Cantidad: <strong>{el.cantidad}</strong>
                     </li>
@@ -123,8 +129,13 @@ function ResumenSolicitud({
         {/* Botón de envío */}
         <div className="flex justify-end mt-6">
           <button
-            onClick={onEnviarSolicitudFinal}
-            className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded"
+            onClick={() => {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('🟢 Botón Enviar presionado')
+              }
+              onEnviarSolicitudFinal()
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded text-sm shadow"
           >
             ✅ Enviar Solicitud Final
           </button>

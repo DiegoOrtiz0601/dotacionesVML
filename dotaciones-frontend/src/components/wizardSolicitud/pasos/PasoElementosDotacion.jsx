@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import api from '../../../api/axios'
 
 const PasoElementosDotacion = ({
-  idSolicitud,
   idEmpresa,
   idCargo,
   onBack,
@@ -16,48 +15,35 @@ const PasoElementosDotacion = ({
   useEffect(() => {
     const cargarElementos = async () => {
       try {
-        const empresaId = typeof idEmpresa === 'object' ? idEmpresa.IdEmpresa : idEmpresa
-        const cargoId = typeof idCargo === 'object' ? idCargo.IdCargo : idCargo
-        
-if (!empresaId || !cargoId) {
-  console.warn('❌ idEmpresa o idCargo no definidos correctamente')
-  return
-}
         const response = await api.get('/elementos-dotacion', {
-          params: {
-            idEmpresa: empresaId,
-            idCargo: cargoId
-          }
+          params: { idEmpresa, idCargo }
         })
-
         setElementos(response.data)
       } catch (error) {
-        console.error('Error cargando elementos de dotación:', error)
+        console.error('❌ Error cargando elementos:', error)
       }
     }
-
-    cargarElementos()
+    if (idEmpresa && idCargo) {
+      cargarElementos()
+    }
   }, [idEmpresa, idCargo])
 
   useEffect(() => {
-    if (elementosPrecargados && elementos.length > 0) {
-      const precargadosMap = {}
+    if (elementosPrecargados?.length && elementos.length > 0) {
+      const map = {}
       elementosPrecargados.forEach(el => {
-        const elementoReal = elementos.find(e => Number(e.idElemento) === Number(el.idElemento))
-
-        precargadosMap[el.idElemento] = {
+        map[el.idElemento] = {
           checked: true,
           talla: el.talla,
           cantidad: el.cantidad,
-          nombreElemento: elementoReal?.nombreElemento || el.nombreElemento || 'Elemento desconocido'
+          nombreElemento: el.nombreElemento
         }
       })
-      setSeleccionados(precargadosMap)
+      setSeleccionados(map)
     }
   }, [elementosPrecargados, elementos])
 
-  const manejarSeleccion = (idElemento, checked) => {
-    const id = Number(idElemento)
+  const manejarSeleccion = (id, checked) => {
     setSeleccionados(prev => ({
       ...prev,
       [id]: {
@@ -67,8 +53,7 @@ if (!empresaId || !cargoId) {
     }))
   }
 
-  const actualizarTalla = (idElemento, talla) => {
-    const id = Number(idElemento)
+  const actualizarTalla = (id, talla) => {
     setSeleccionados(prev => ({
       ...prev,
       [id]: {
@@ -78,8 +63,7 @@ if (!empresaId || !cargoId) {
     }))
   }
 
-  const actualizarCantidad = (idElemento, cantidad) => {
-    const id = Number(idElemento)
+  const actualizarCantidad = (id, cantidad) => {
     setSeleccionados(prev => ({
       ...prev,
       [id]: {
@@ -91,21 +75,13 @@ if (!empresaId || !cargoId) {
 
   const manejarAgregar = () => {
     const elementosFinales = Object.entries(seleccionados)
-      .filter(([_, val]) => val.checked && val.talla && val.cantidad)
-      .map(([idElemento, val]) => {
-        const id = Number(idElemento)
-        const elementoRef = elementos.find(e => Number(e.idElemento) === id)
-        const nombreElemento = elementoRef?.nombreElemento || val.nombreElemento || 'Elemento no encontrado'
-
-        return {
-          idElemento: id,
-          nombreElemento,
-          talla: val.talla,
-          cantidad: val.cantidad
-        }
-      })
-
-    console.log('🧪 Elementos agregados al resumen:', elementosFinales)
+      .filter(([_, val]) => val.checked && val.talla?.trim() && Number(val.cantidad) > 0)
+      .map(([idElemento, val]) => ({
+        idElemento: Number(idElemento),
+        talla: val.talla,
+        cantidad: Number(val.cantidad),
+        nombreElemento: val.nombreElemento
+      }))
 
     if (elementosFinales.length === 0) {
       alert('⚠️ Debes seleccionar al menos un elemento con talla y cantidad.')
@@ -117,7 +93,7 @@ if (!empresaId || !cargoId) {
     if (confirm('¿Deseas agregar otro empleado?')) {
       onAgregarOtroEmpleado()
     } else {
-      alert('✅ Solicitud preparada para enviar (simulado)')
+      alert('✅ Elementos cargados. Listo para enviar.')
     }
   }
 
@@ -125,47 +101,51 @@ if (!empresaId || !cargoId) {
     <div>
       <h3 className="text-lg font-bold mb-4">Agregar Elementos de Dotación</h3>
 
-      {elementos.map((elemento) => (
-        <div key={elemento.idElemento} className="border p-4 mb-2 rounded shadow-sm">
-          <label className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              checked={seleccionados[elemento.idElemento]?.checked || false}
-              onChange={(e) => manejarSeleccion(elemento.idElemento, e.target.checked)}
-            />
-            <span className="font-semibold">{elemento.nombreElemento}</span>
-          </label>
+      {elementos.map((el) => {
+        const tallas = el.tallas?.split(',') || []
 
-          {seleccionados[elemento.idElemento]?.checked && (
-            <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm">Talla</label>
-                <select
-                  className="w-full border px-2 py-1"
-                  value={seleccionados[elemento.idElemento]?.talla || ''}
-                  onChange={(e) => actualizarTalla(elemento.idElemento, e.target.value)}
-                >
-                  <option value="">Seleccione talla</option>
-                  {elemento.tallas?.split(',').map((talla, i) => (
-                    <option key={i} value={talla.trim()}>{talla.trim()}</option>
-                  ))}
-                </select>
-              </div>
+        return (
+          <div key={el.idElemento} className="border p-4 mb-2 rounded shadow-sm">
+            <label className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={seleccionados[el.idElemento]?.checked || false}
+                onChange={(e) => manejarSeleccion(el.idElemento, e.target.checked)}
+              />
+              <span className="font-semibold">{el.nombreElemento}</span>
+            </label>
 
-              <div>
-                <label className="block text-sm">Cantidad</label>
-                <input
-                  type="number"
-                  min="1"
-                  className="w-full border px-2 py-1"
-                  value={seleccionados[elemento.idElemento]?.cantidad || ''}
-                  onChange={(e) => actualizarCantidad(elemento.idElemento, e.target.value)}
-                />
+            {seleccionados[el.idElemento]?.checked && (
+              <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm">Talla</label>
+                  <select
+                    className="w-full border px-2 py-1"
+                    value={seleccionados[el.idElemento]?.talla || ''}
+                    onChange={(e) => actualizarTalla(el.idElemento, e.target.value)}
+                  >
+                    <option value="">Seleccione talla</option>
+                    {tallas.map((talla, i) => (
+                      <option key={i} value={talla.trim()}>{talla.trim()}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm">Cantidad</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full border px-2 py-1"
+                    value={seleccionados[el.idElemento]?.cantidad || ''}
+                    onChange={(e) => actualizarCantidad(el.idElemento, e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        )
+      })}
 
       <div className="flex justify-between mt-6">
         <button

@@ -14,7 +14,7 @@ use App\Http\Controllers\TblTipoSolicitudController;
 use App\Http\Controllers\TblSolicitudController;
 use App\Http\Controllers\TblDetalleSolicitudEmpleadoController;
 use App\Http\Controllers\TblElementoController;
-use App\Http\Controllers\TblTallaElementoController;
+
 use App\Http\Controllers\TblDetalleSolicitudElementoController;
 use App\Http\Controllers\TblSolicitudEmpleadoController;
 use App\Http\Controllers\TblElementosDotacionController;
@@ -38,7 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('solicitudes', TblSolicitudController::class);
     Route::apiResource('detalle-solicitud-empleado', TblDetalleSolicitudEmpleadoController::class);
     Route::apiResource('elementos', TblElementoController::class);
-    Route::apiResource('talla-elemento', TblTallaElementoController::class);
+   
     Route::apiResource('detalle-solicitud-elemento', TblDetalleSolicitudElementoController::class);
 
     // Rutas auxiliares
@@ -56,6 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/solicitudes', [TblSolicitudController::class, 'store']);
     Route::post('/detalle-solicitud-empleado', [TblSolicitudEmpleadoController::class, 'agregarEmpleado']);
 
+Route::post('/detalle-solicitud-elemento', [TblDetalleSolicitudElementoController::class, 'store']);
 Route::post('/guardar-evidencia', [TblEvidenciaTemporalController::class, 'guardarEvidencia']);
 
 });

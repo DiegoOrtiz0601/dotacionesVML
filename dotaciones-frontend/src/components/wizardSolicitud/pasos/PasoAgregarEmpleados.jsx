@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import api from '../../../api/axios'
 
 const PasoAgregarEmpleados = ({
@@ -24,50 +24,47 @@ const PasoAgregarEmpleados = ({
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null)
 
   useEffect(() => {
-    const cargarTipos = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('/tipo-solicitud')
-        setTiposSolicitud(response.data)
+        const [tiposRes, cargosRes] = await Promise.all([
+          api.get('/tipo-solicitud'),
+          empresa && sede
+            ? api.get('/cargos-por-empresa-sede', {
+                params: { idEmpresa: empresa, idSede: sede }
+              })
+            : Promise.resolve({ data: [] })
+        ])
+        setTiposSolicitud(tiposRes.data)
+        setCargos(cargosRes.data)
       } catch (error) {
-        console.error('Error cargando tipos de solicitud:', error)
+        console.error('❌ Error cargando datos iniciales:', error)
       }
     }
-    cargarTipos()
-  }, [])
-
-  useEffect(() => {
-    const cargarCargos = async () => {
-      if (empresa && sede) {
-        try {
-          const response = await api.get('/cargos-por-empresa-sede', {
-            params: { idEmpresa: empresa, idSede: sede }
-          })
-          setCargos(response.data)
-        } catch (error) {
-          console.error('Error cargando cargos:', error)
-        }
-      }
-    }
-    cargarCargos()
+    fetchData()
   }, [empresa, sede])
 
-  const consultarHistorial = async () => {
-    if (tipoSolicitudSeleccionado !== '1' && documentoEmpleado.length >= 5) {
-      try {
-        const response = await api.get('/historial-solicitudes', {
-          params: { documento: documentoEmpleado }
-        })
-        setHistorialSolicitudes(response.data || [])
-      } catch (error) {
-        if (error.response?.status === 400) {
-          console.warn('⚠️ No hay historial para este documento.')
-          setHistorialSolicitudes([])
-        } else {
-          console.error('Error consultando historial:', error)
-        }
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (tipoSolicitudSeleccionado !== '1' && documentoEmpleado.length >= 5) {
+        consultarHistorial()
       }
-    } else {
-      setHistorialSolicitudes([])
+    }, 500)
+    return () => clearTimeout(delayDebounce)
+  }, [documentoEmpleado, tipoSolicitudSeleccionado])
+
+  const consultarHistorial = async () => {
+    try {
+      const response = await api.get('/historial-solicitudes', {
+        params: { documento: documentoEmpleado }
+      })
+      setHistorialSolicitudes(response.data || [])
+    } catch (error) {
+      if (error.response?.status === 400) {
+        console.warn('⚠️ No hay historial para este documento.')
+        setHistorialSolicitudes([])
+      } else {
+        console.error('Error consultando historial:', error)
+      }
     }
   }
 
@@ -134,7 +131,6 @@ const PasoAgregarEmpleados = ({
             type="text"
             value={documentoEmpleado}
             onChange={(e) => setDocumentoEmpleado(e.target.value.replace(/\D/g, ''))}
-            onBlur={consultarHistorial}
             className="w-full border border-gray-300 rounded px-3 py-2"
           />
         </div>
@@ -231,21 +227,10 @@ const PasoAgregarEmpleados = ({
       )}
 
       <div className="flex justify-between mt-6">
-        <button
-          onClick={onBack}
-          className="bg-gray-300 text-gray-700 px-4 py-2 rounded"
-        >
-          ⬅️ Volver
-        </button>
-        <button
-          onClick={continuar}
-          className="bg-primario text-white px-4 py-2 rounded"
-        >
-          Siguiente ➡️
-        </button>
+        <button onClick={onBack} className="bg-gray-300 text-gray-700 px-4 py-2 rounded">⬅️ Volver</button>
+        <button onClick={continuar} className="bg-primario text-white px-4 py-2 rounded">Siguiente ➡️</button>
       </div>
 
-      {/* Modal visualización evidencia */}
       {mostrarModal && archivoSeleccionado && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
           <div className="bg-white p-4 rounded-lg shadow-md w-full max-w-xl relative">
@@ -257,17 +242,9 @@ const PasoAgregarEmpleados = ({
             </button>
             <h2 className="text-lg font-semibold mb-4">Vista previa de evidencia</h2>
             {archivoSeleccionado.type.startsWith('image/') ? (
-              <img
-                src={URL.createObjectURL(archivoSeleccionado)}
-                alt="Evidencia"
-                className="max-h-[500px] w-auto mx-auto"
-              />
+              <img src={URL.createObjectURL(archivoSeleccionado)} alt="Evidencia" className="max-h-[500px] w-auto mx-auto" />
             ) : (
-              <iframe
-                src={URL.createObjectURL(archivoSeleccionado)}
-                title="PDF"
-                className="w-full h-[500px]"
-              />
+              <iframe src={URL.createObjectURL(archivoSeleccionado)} title="PDF" className="w-full h-[500px]" />
             )}
           </div>
         </div>

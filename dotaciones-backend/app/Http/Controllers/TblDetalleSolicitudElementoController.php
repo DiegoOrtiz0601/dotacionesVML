@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\TblDetalleSolicitudElemento;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class TblDetalleSolicitudElementoController extends Controller
 {
@@ -14,18 +15,25 @@ class TblDetalleSolicitudElementoController extends Controller
 
     public function store(Request $request)
 {
-     \Log::info('📩 Payload recibido en detalle-solicitud-empleado', $request->all());
+    Log::info('📩 Payload recibido en detalle-solicitud-elemento', $request->all());
+
     $request->validate([
-        'idSolicitud' => 'required|integer|exists:tbl_solicitudes,idSolicitud',
-        'documentoEmpleado' => 'required|string',
-        'idElemento' => 'required|integer',
-        'cantidad' => 'required|integer|min:1',
-        'talla' => 'required|string|max:20',
+        'idDetalleSolicitud' => 'required|exists:tbl_detalle_solicitud_empleado,idDetalleSolicitud',
+        'idElemento' => 'required|exists:tbl_elementos,idElemento',
+        'TallaElemento' => 'required|string|max:20',
+        'Cantidad' => 'required|integer|min:1',
     ]);
 
-    $registro = TblDetalleSolicitudElemento::create($request->all());
+    $registro = TblDetalleSolicitudElemento::create([
+        'idDetalleSolicitud' => $request->idDetalleSolicitud,
+        'idElemento' => $request->idElemento,
+        'TallaElemento' => $request->TallaElemento,
+        'Cantidad' => $request->Cantidad
+    ]);
+
     return response()->json($registro, 201);
 }
+
 
     public function show($id)
     {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import api from '../../../api/axios'
 
 function PasoSeleccionEmpresaSede({
@@ -12,39 +12,48 @@ function PasoSeleccionEmpresaSede({
   onContinue
 }) {
   const [loading, setLoading] = useState(false)
+  const [numeroSolicitud, setNumeroSolicitud] = useState(null)
+  const [idSolicitud, setIdSolicitud] = useState(null)
 
-  // Si empresaSeleccionada es objeto, accede al ID
   const empresaId = empresaSeleccionada?.IdEmpresa || ''
   const sedeId = sedeSeleccionada?.IdSede || ''
 
-  const sedesFiltradas = sedes?.filter(s => s.IdEmpresa == empresaId)
+  const sedesFiltradas = useMemo(() => {
+    return sedes?.filter(s => s.IdEmpresa == empresaId)
+  }, [sedes, empresaId])
 
-  const handleContinuar = async () => {
-  if (!empresaSeleccionada || !sedeSeleccionada) {
-    alert('Debes seleccionar empresa y sede antes de continuar.')
-    return
-  }
+  // ⏳ Pre-cargar número solicitud cuando haya empresa y sede seleccionadas
+  useEffect(() => {
+    const generarNumero = async () => {
+      if (empresaSeleccionada && sedeSeleccionada) {
+        try {
+          const response = await api.get('/generar-numero-solicitud')
+          setNumeroSolicitud(response.data.numeroSolicitud)
+          setIdSolicitud(response.data.idSolicitud)
+        } catch (err) {
+          console.error('⚠️ Error precargando número de solicitud:', err)
+          setNumeroSolicitud(null)
+          setIdSolicitud(null)
+        }
+      }
+    }
+    generarNumero()
+  }, [empresaSeleccionada, sedeSeleccionada])
 
-  try {
-    setLoading(true)
-    const response = await api.get('/generar-numero-solicitud')
-    const { idSolicitud, numeroSolicitud } = response.data
+  const handleContinuar = () => {
+    if (!empresaSeleccionada || !sedeSeleccionada || !idSolicitud || !numeroSolicitud) {
+      alert('Debes seleccionar empresa y sede, y esperar a que cargue el número de solicitud.')
+      return
+    }
 
     onContinue({
-      idSolicitud,           // ✅ este es el ID FK real para registrar detalle
-      numeroSolicitud,       // ✅ este se muestra al usuario (DOT-000X)
+      idSolicitud,
+      numeroSolicitud,
       empresaSeleccionada,
       sedeSeleccionada,
       usuario
     })
-  } catch (error) {
-    console.error('❌ Error generando número de solicitud:', error)
-    alert('Error al generar número de solicitud. Intente nuevamente.')
-  } finally {
-    setLoading(false)
   }
-}
-
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -88,13 +97,16 @@ function PasoSeleccionEmpresaSede({
         </select>
       </div>
 
-      <div className="col-span-2 mt-4 flex justify-end">
+      <div className="col-span-2 mt-4 flex justify-between items-center">
+        <div className="text-sm text-gray-500 italic">
+          {numeroSolicitud ? `Número generado: ${numeroSolicitud}` : 'Generando número...'}
+        </div>
         <button
-          className={`bg-primario text-white px-4 py-2 rounded ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`bg-primario text-white px-4 py-2 rounded ${!numeroSolicitud ? 'opacity-50 cursor-not-allowed' : ''}`}
           onClick={handleContinuar}
-          disabled={loading}
+          disabled={!numeroSolicitud}
         >
-          {loading ? 'Cargando...' : 'Siguiente ➡️'}
+          Siguiente ➡️
         </button>
       </div>
     </div>

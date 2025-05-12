@@ -55,13 +55,15 @@ class TblUsuarioSistemaController extends Controller
         return response()->json(['message' => 'No autenticado'], 401);
     }
 
+    // ✅ Devolver solo los campos que realmente se usan en el frontend
     return response()->json([
         'idUsuario' => $usuario->idUsuario ?? $usuario->id ?? null,
-        'nombre' => $usuario->NombresUsuarioAutorizado ?? '',
-        'documento' => $usuario->DocumentoUsuario ?? '',
-        'correo' => $usuario->CorreoSolicitante ?? '',
-        'cargo' => $usuario->CargoSolicitante ?? '',
+        'nombre'    => $usuario->NombresUsuarioAutorizado ?? $usuario->NombreCompleto ?? $usuario->name ?? '',
+        'documento' => $usuario->DocumentoUsuario ?? $usuario->documento ?? '',
+        'correo'    => $usuario->CorreoSolicitante ?? $usuario->email ?? '',
+        'cargo'     => $usuario->CargoSolicitante ?? $usuario->cargo ?? '',
     ]);
 }
+
 
 }

@@ -11,5 +11,11 @@ class TblDetalleSolicitudElemento extends Model
 
     protected $table = 'tbl_detalle_solicitud_elemento';
     protected $primaryKey = 'idDetalleSolicitudElementos';
-    protected $fillable = ['idDetalleSolicitud', 'idElemento', 'idTallaElemento', 'Cantidad'];
+    
+    protected $fillable = [
+        'idDetalleSolicitud',
+        'idElemento',
+        'TallaElemento', // ✅ este es el campo correcto
+        'Cantidad'
+    ];
 }
