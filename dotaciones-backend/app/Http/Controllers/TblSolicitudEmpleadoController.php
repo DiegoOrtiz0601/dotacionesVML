@@ -14,13 +14,20 @@ class TblSolicitudEmpleadoController extends Controller
     public function agregarEmpleado(Request $request)
     {
         $validated = Validator::make($request->all(), [
-            'idSolicitud' => 'required|integer|exists:tbl_solicitudes,idSolicitud',
+            'idSolicitud' => 'required|exists:tbl_solicitudes,id',
             'nombresEmpleado' => 'required|string|max:255',
             'documentoEmpleado' => 'required|string|max:50',
             'idCargo' => 'required|integer|exists:tbl_cargo,IdCargo',
-            'idTipoSolicitud' => 'required|integer|exists:tbl_tipo_solicitud,id',
+            'idTipoSolicitud' => 'required|integer|exists:tbl_tipo_solicitud,IdTipoSolicitud',
             'observaciones' => 'nullable|string',
         ]);
+          if ($validated->fails()) {
+        Log::error('❌ Validación fallida en agregarEmpleado', [
+            'errores' => $validated->errors(),
+            'payload' => $request->all()
+        ]);
+        return response()->json(['errors' => $validated->errors()], 422);
+    }
 
         if ($validated->fails()) {
             return response()->json(['errors' => $validated->errors()], 422);
@@ -73,7 +80,8 @@ class TblSolicitudEmpleadoController extends Controller
         }
 
         $historial = DB::table('tbl_detalle_solicitud_empleado')
-            ->join('tbl_tipo_solicitud', 'tbl_detalle_solicitud_empleado.idTipoSolicitud', '=', 'tbl_tipo_solicitud.id')
+           ->join('tbl_tipo_solicitud', 'tbl_detalle_solicitud_empleado.idTipoSolicitud', '=', 'tbl_tipo_solicitud.IdTipoSolicitud')
+
             ->where('tbl_detalle_solicitud_empleado.documentoEmpleado', $documento)
             ->select(
                 'tbl_detalle_solicitud_empleado.idDetalleSolicitud',

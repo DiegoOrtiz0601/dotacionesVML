@@ -98,6 +98,7 @@ const PasoAgregarEmpleados = ({
       nombresEmpleado,
       documentoEmpleado,
       tipoSolicitud: tipoSeleccionado?.NombreTipo || tipoSolicitudSeleccionado,
+      IdTipoSolicitud: tipoSeleccionado?.id || parseInt(tipoSolicitudSeleccionado),
       idCargo: cargoSeleccionado,
       cargo: nombreCargo,
       observaciones,

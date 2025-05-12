@@ -13,10 +13,20 @@ class TblDetalleSolicitudEmpleadoController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $registro = TblDetalleSolicitudEmpleado::create($request->all());
-        return response()->json($registro, 201);
-    }
+{
+    $validated = $request->validate([
+        'idSolicitud'             => 'required|exists:tbl_solicitudes,idSolicitud',
+        'nombresEmpleado'         => 'required|string|max:100',
+        'documentoEmpleado'       => 'required|string|max:20',
+        'idCargo'                 => 'required|exists:tbl_cargos,idCargo',
+        'IdTipoSolicitud'         => 'required|exists:tbl_tipo_solicitud,IdTipoSolicitud',
+        'observaciones'           => 'nullable|string|max:255',
+        'EstadoSolicitudEmpleado' => 'required|string|max:50',
+    ]);
+
+    $registro = TblDetalleSolicitudEmpleado::create($validated);
+    return response()->json($registro, 201);
+}
 
     public function show($id)
     {

@@ -13,10 +13,19 @@ class TblDetalleSolicitudElementoController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $registro = TblDetalleSolicitudElemento::create($request->all());
-        return response()->json($registro, 201);
-    }
+{
+     \Log::info('📩 Payload recibido en detalle-solicitud-empleado', $request->all());
+    $request->validate([
+        'idSolicitud' => 'required|integer|exists:tbl_solicitudes,idSolicitud',
+        'documentoEmpleado' => 'required|string',
+        'idElemento' => 'required|integer',
+        'cantidad' => 'required|integer|min:1',
+        'talla' => 'required|string|max:20',
+    ]);
+
+    $registro = TblDetalleSolicitudElemento::create($request->all());
+    return response()->json($registro, 201);
+}
 
     public function show($id)
     {
