@@ -11,5 +11,5 @@ class TblEmpresa extends Model
 
     protected $table = 'tbl_empresa';
     protected $primaryKey = 'IdEmpresa';
-    protected $fillable = ['NombreEmpresa', 'NitEmpresa', 'DireccionEmpresa', 'IdCiudad'];
+    protected $fillable = ['NombreEmpresa', 'NitEmpresa', 'IdCiudad','ruta_logo',];
 }

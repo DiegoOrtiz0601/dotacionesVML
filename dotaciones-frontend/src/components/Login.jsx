@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 import { csrf } from '../api/csrf'
 
@@ -6,25 +7,38 @@ function Login() {
   const [usuario, setUsuario] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   const handleLogin = async () => {
     try {
-      // 1. Solicita la cookie CSRF desde Sanctum
-      await csrf()
+      await csrf() // Requerido si usas Sanctum (aunque no obligatorio con token puro)
 
-      // 2. Intenta autenticar
       const response = await api.post('/login', {
         NombreUsuario: usuario,
         PasswordUsuario: contrasena,
       })
 
-      // 3. Guarda token y usuario
-      localStorage.setItem('access_token', response.data.access_token)
-      localStorage.setItem('usuario', JSON.stringify(response.data.user))
+      const user = response.data.user
+      const token = response.data.access_token
 
-      window.location.href = '/dashboard'
+      console.log('🔐 Usuario autenticado:', user)
+
+      // Guardar en localStorage
+      localStorage.setItem('access_token', token)
+      localStorage.setItem('usuario', JSON.stringify(user))
+
+      // Redirección por rol
+      const rol = user.RolUsuario.toLowerCase()
+      if (rol === 'usuario') {
+        navigate('/usuario/nueva-solicitud')
+      } else if (rol === 'talento_humano') {
+        navigate('/talento/dashboard')
+      } else {
+        navigate('/login')
+      }
+
     } catch (err) {
-      console.error(err)
+      console.error('❌ Error al iniciar sesión:', err)
       setError('❌ Credenciales inválidas o error de conexión')
     }
   }

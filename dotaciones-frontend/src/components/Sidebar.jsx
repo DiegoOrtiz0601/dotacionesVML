@@ -1,32 +1,84 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom'
 
 function Sidebar() {
-  const location = useLocation();
-  const usuario = JSON.parse(localStorage.getItem('usuario'));
+  const location = useLocation()
+  const usuario = JSON.parse(localStorage.getItem('usuario'))
 
+  // 🔐 Validación inicial: si no hay usuario autenticado, no mostrar el sidebar
   if (!usuario || !usuario.RolUsuario) {
-    return null;
+    return null
   }
 
-  const links = [];
+  const links = []
 
-  // Menú para rol 'usuario'
+  // 🧑 Menú para rol 'usuario'
   if (usuario.RolUsuario === 'usuario') {
     links.push(
-      { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-      { path: '/nueva-solicitud', label: 'Crear Solicitud', icon: '📝' },
-      { path: '/solicitudes', label: 'Mis Solicitudes', icon: '📄' },
-      { path: '/entregas', label: 'Entrega de Dotación', icon: '🎯' },
-      { path: '/configuracion', label: 'Configuración', icon: '⚙️' }
-    );
+      {
+        path: '/usuario/dashboard',
+        label: 'Dashboard',
+        icon: '📊'
+      },
+      {
+        path: '/usuario/nueva-solicitud',
+        label: 'Crear Solicitud',
+        icon: '📝'
+      },
+      {
+        path: '/usuario/solicitudes',
+        label: 'Mis Solicitudes',
+        icon: '📄'
+      },
+      {
+        path: '/usuario/entregas',
+        label: 'Entrega de Dotación',
+        icon: '🎯'
+      },
+      {
+        path: '/usuario/configuracion',
+        label: 'Configuración',
+        icon: '⚙️'
+      }
+    )
   }
 
-  // Aquí puedes añadir otros menús para roles como 'admin', 'revisor', etc.
+  // 🧑‍💼 Menú para rol 'talento_humano'
+  if (usuario.RolUsuario === 'talento_humano') {
+    links.push(
+      {
+        path: '/talento/dashboard',
+        label: 'Dashboard',
+        icon: '📊'
+      },
+      {
+        path: '/talento/gestionar-solicitudes',
+        label: 'Gestionar Solicitudes',
+        icon: '✅'
+      },
+      {
+        path: '/talento/historial-solicitudes',
+        label: 'Historial',
+        icon: '📁'
+      },
+      {
+        path: '/talento/rechazadas',
+        label: 'Rechazadas',
+        icon: '❌'
+      },
+      {
+        path: '/talento/configuracion',
+        label: 'Configuración',
+        icon: '⚙️'
+      }
+    )
+  }
 
   return (
     <aside className="w-64 bg-primario text-white min-h-screen fixed p-6 shadow-xl">
+      {/* 🔰 Logo y título */}
       <div className="text-2xl font-bold mb-10 text-center tracking-wide">🧥 Dotaciones</div>
 
+      {/* 🧭 Navegación dinámica según el rol */}
       <nav className="flex flex-col gap-3">
         {links.map(link => (
           <Link
@@ -41,7 +93,7 @@ function Sidebar() {
         ))}
       </nav>
     </aside>
-  );
+  )
 }
 
-export default Sidebar;
+export default Sidebar

@@ -12,6 +12,8 @@ function ResumenSolicitud({
   onEliminarEmpleado
 }) {
   const [archivoModal, setArchivoModal] = useState(null)
+  const [modalExito, setModalExito] = useState(false)
+  const [numeroConfirmada, setNumeroConfirmada] = useState(null)
 
   const nombreEmpresa = useMemo(() => {
     return typeof empresa === 'object' ? empresa?.NombreEmpresa || empresa?.nombre : empresa
@@ -29,11 +31,10 @@ function ResumenSolicitud({
   return (
     <>
       <div className="bg-white rounded shadow-md border border-gray-300 p-6 mt-6">
-        {/* Encabezado */}
         <div className="flex justify-between items-center border-b pb-4 mb-4">
           <div className="text-sm text-gray-700">
             <p><strong>Fecha:</strong> {fechaActual}</p>
-            <p><strong>Solicitud:</strong> #{numeroSolicitud}</p>
+            <p><strong>Solicitud:</strong> {numeroSolicitud}</p>
           </div>
           <div className="text-center">
             <h3 className="text-xl font-bold text-primario">🧾 Formato de Solicitud de Dotación</h3>
@@ -43,7 +44,6 @@ function ResumenSolicitud({
           </div>
         </div>
 
-        {/* Información del usuario */}
         <div className="mb-6 text-sm">
           <p><strong>Responsable:</strong> {usuario?.nombre}</p>
           <p><strong>Documento:</strong> {usuario?.documento}</p>
@@ -52,7 +52,6 @@ function ResumenSolicitud({
           <p><strong>Sede:</strong> {nombreSede}</p>
         </div>
 
-        {/* Empleados */}
         <div>
           <h4 className="text-md font-semibold mb-2 text-primario">👤 Empleados incluidos:</h4>
 
@@ -126,14 +125,15 @@ function ResumenSolicitud({
           ))}
         </div>
 
-        {/* Botón de envío */}
         <div className="flex justify-end mt-6">
           <button
-            onClick={() => {
+            onClick={async () => {
               if (process.env.NODE_ENV === 'development') {
                 console.log('🟢 Botón Enviar presionado')
               }
-              onEnviarSolicitudFinal()
+              const numero = await onEnviarSolicitudFinal()
+              setNumeroConfirmada(numero)
+              setModalExito(true)
             }}
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded text-sm shadow"
           >
@@ -142,7 +142,6 @@ function ResumenSolicitud({
         </div>
       </div>
 
-      {/* Modal para mostrar evidencia */}
       {archivoModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-4 max-w-2xl w-full shadow-lg relative">
@@ -168,6 +167,23 @@ function ResumenSolicitud({
                 Cerrar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {modalExito && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full text-center">
+            <h2 className="text-2xl font-bold text-green-600 mb-4">🎉 ¡Felicitaciones!</h2>
+            <p className="text-gray-700 mb-6">
+              Su solicitud <strong>#{numeroConfirmada}</strong> fue realizada con éxito.
+            </p>
+            <button
+              onClick={() => setModalExito(false)}
+              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded"
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}

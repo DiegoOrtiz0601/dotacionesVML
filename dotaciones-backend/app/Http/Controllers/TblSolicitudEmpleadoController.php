@@ -13,21 +13,23 @@ class TblSolicitudEmpleadoController extends Controller
     // Método para agregar un empleado a una solicitud
     public function agregarEmpleado(Request $request)
     {
-        $validated = Validator::make($request->all(), [
-            'idSolicitud' => 'required|exists:tbl_solicitudes,id',
-            'nombresEmpleado' => 'required|string|max:255',
-            'documentoEmpleado' => 'required|string|max:50',
-            'idCargo' => 'required|integer|exists:tbl_cargo,IdCargo',
-            'idTipoSolicitud' => 'required|integer|exists:tbl_tipo_solicitud,IdTipoSolicitud',
-            'observaciones' => 'nullable|string',
-        ]);
-          if ($validated->fails()) {
-        Log::error('❌ Validación fallida en agregarEmpleado', [
-            'errores' => $validated->errors(),
-            'payload' => $request->all()
-        ]);
-        return response()->json(['errors' => $validated->errors()], 422);
-    }
+       $validated = Validator::make($request->all(), [
+    'idSolicitud' => 'required|exists:tbl_solicitudes,id',
+    'nombresEmpleado' => 'required|string|max:255',
+    'documentoEmpleado' => 'required|string|max:50',
+    'idCargo' => 'required|integer|exists:tbl_cargo,IdCargo',
+    'idTipoSolicitud' => 'required|integer|exists:tbl_tipo_solicitud,IdTipoSolicitud',
+    'observaciones' => 'nullable|string',
+]);
+
+if ($validated->fails()) {
+    Log::error('❌ Validación fallida en agregarEmpleado', [
+        'errores' => $validated->errors(),
+        'payload' => $request->all()
+    ]);
+    return response()->json(['errors' => $validated->errors()], 422);
+}
+    
 
         if ($validated->fails()) {
             return response()->json(['errors' => $validated->errors()], 422);

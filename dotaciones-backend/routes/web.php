@@ -33,3 +33,30 @@ Route::middleware('auth')->group(function () {
 
 // 🛠️ Rutas de autenticación generadas por Breeze/Fortify/etc.
 require __DIR__.'/auth.php';
+
+//Prueba pdf
+use Barryvdh\DomPDF\Facade\Pdf;
+
+Route::get('/test-pdf', function () {
+    $pdf = Pdf::loadView('emails.resumen_solicitud', [
+        'solicitud' => (object)[
+            'codigoSolicitud' => 'DOT-9999',
+            'empresa' => 'Empresa de Ejemplo',
+            'sede' => 'Sede Principal',
+            'estadoSolicitud' => 'Aprobado',
+        ],
+        'empleados' => [[
+            'nombreEmpleado' => 'Juan Pérez',
+            'documentoEmpleado' => '12345678',
+            'elementos' => [[
+                'nombreElemento' => 'Zapatos de seguridad',
+                'talla' => '42',
+                'cantidadSolicitada' => 1,
+                'cantidad' => 1,
+                'observacionElemento' => ''
+            ]]
+        ]]
+    ]);
+    return $pdf->download('resumen.pdf');
+});
+
