@@ -28,6 +28,8 @@ use App\Http\Controllers\TblEvidenciaTemporalController;
 // NUEVO: Controlador API personalizado
 use App\Http\Controllers\MisSolicitudesController;
 
+use App\Http\Controllers\EntregaPDFController;
+
 // ─────────────────────────────────────────────────────────────
 // 🟢 1. Ruta de login (fuera del middleware Sanctum)
 // ─────────────────────────────────────────────────────────────
@@ -89,5 +91,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/solicitudes/{id}', [TblSolicitudController::class, 'show']);
     Route::put('/solicitudes/{id}/elementos', [TblSolicitudController::class, 'actualizarElementos']);
     Route::post('/solicitudes/{id}/aprobar', [TblSolicitudController::class, 'aprobar']);
+
+    // Modulo:Entrega Solicitudes ROL.Usuario
+    
+    Route::get('/solicitudes-entrega', [TblSolicitudController::class, 'solicitudesParaEntrega']);
+
+    // pdf desde backend
+
+    Route::post('/generar-pdf-entrega', [EntregaPDFController::class, 'generar']);
+
+
 
 });

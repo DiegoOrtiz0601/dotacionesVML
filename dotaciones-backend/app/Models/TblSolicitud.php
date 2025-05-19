@@ -41,4 +41,5 @@ class TblSolicitud extends Model
     {
         return $this->belongsTo(TblUsuarioSistema::class, 'idUsuario', 'idUsuario');
     }
+    
 }

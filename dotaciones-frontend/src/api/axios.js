@@ -1,14 +1,15 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api', // Asegúrate que tu backend Laravel corre aquí
-  withCredentials: true, // Para incluir cookies en peticiones
+  baseURL: 'http://localhost:8000/api',
+  withCredentials: true,
   headers: {
     Accept: 'application/json',
+    'Content-Type': 'application/json', // ✅ necesario para solicitudes POST con JSON
   },
 })
 
-// Interceptor para incluir el token automáticamente si está en localStorage
+// Interceptor para token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
   if (token) {

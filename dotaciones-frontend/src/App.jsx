@@ -13,6 +13,8 @@ import HistorialSolicitudes from "./components/talento/HistorialSolicitudes";
 import SolicitudesRechazadas from "./components/talento/SolicitudesRechazadas";
 import TramitarSolicitud from "./components/talento/TramitarSolicitud";
 
+import EntregaSolicitud from "./components/usuario/EntregaSolicitud";
+
 function App() {
   return (
     <BrowserRouter>
@@ -27,6 +29,8 @@ function App() {
             <Route path="nueva-solicitud" element={<NuevaSolicitud />} />
             <Route path="solicitudes" element={<Solicitudes />} />
             <Route path="configuracion" element={<Configuracion />} />
+            <Route path="entregas" element={<EntregaSolicitud />} />
+
           </Route>
         </Route>
 
