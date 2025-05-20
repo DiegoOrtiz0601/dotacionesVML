@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../api/axios'
 import ResumenSolicitudVista from './wizardSolicitud/ResumenSolicitudVista'
-import { obtenerEmpresasYSedes } from '../api/utils' // ✅ Utilidad centralizada para obtener empresas y sedes
+import { obtenerEmpresasYSedes } from '../api/utils'
 
 const MisSolicitudes = () => {
   const [empresas, setEmpresas] = useState([])
@@ -13,7 +13,6 @@ const MisSolicitudes = () => {
   const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null)
   const [usuario, setUsuario] = useState(null)
 
-  // 🔄 Cargar usuario autenticado y las empresas/sedes asociadas
   useEffect(() => {
     const cargarDatos = async () => {
       try {
@@ -32,7 +31,6 @@ const MisSolicitudes = () => {
     cargarDatos()
   }, [])
 
-  // 🔍 Consultar solicitudes filtradas por empresa y sede
   const cargarSolicitudes = async () => {
     try {
       const response = await api.get('/mis-solicitudes', {
@@ -47,7 +45,6 @@ const MisSolicitudes = () => {
     }
   }
 
-  // 👁️ Ver detalle de una solicitud seleccionada
   const verDetalle = async (solicitud) => {
     try {
       const response = await api.get(`/mis-solicitudes/${solicitud.id}`)
@@ -73,24 +70,28 @@ const MisSolicitudes = () => {
         <select
           className="border px-3 py-2 rounded w-1/3"
           value={empresaSeleccionada}
-          onChange={e => setEmpresaSeleccionada(e.target.value)}
+          onChange={(e) => setEmpresaSeleccionada(e.target.value)}
         >
           <option value="">Seleccione empresa</option>
-          {empresas.map(emp => (
-            <option key={emp.IdEmpresa} value={emp.IdEmpresa}>{emp.NombreEmpresa}</option>
+          {empresas.map((emp) => (
+            <option key={emp.IdEmpresa} value={emp.IdEmpresa}>
+              {emp.NombreEmpresa}
+            </option>
           ))}
         </select>
 
         <select
           className="border px-3 py-2 rounded w-1/3"
           value={sedeSeleccionada}
-          onChange={e => setSedeSeleccionada(e.target.value)}
+          onChange={(e) => setSedeSeleccionada(e.target.value)}
         >
           <option value="">Seleccione sede</option>
           {sedes
-            .filter(s => s.IdEmpresa == empresaSeleccionada)
-            .map(s => (
-              <option key={s.IdSede} value={s.IdSede}>{s.NombreSede}</option>
+            .filter((s) => s.IdEmpresa == empresaSeleccionada)
+            .map((s) => (
+              <option key={s.IdSede} value={s.IdSede}>
+                {s.NombreSede}
+              </option>
             ))}
         </select>
 
@@ -114,11 +115,15 @@ const MisSolicitudes = () => {
           </tr>
         </thead>
         <tbody>
-          {solicitudes.map(sol => (
+          {solicitudes.map((sol) => (
             <tr key={sol.id} className="border-t hover:bg-gray-50">
               <td className="p-2">{sol.codigoSolicitud}</td>
-              <td className="p-2">{new Date(sol.created_at).toLocaleDateString()}</td>
-              <td className="p-2">{new Date(sol.updated_at).toLocaleDateString()}</td>
+              <td className="p-2">
+                {new Date(sol.created_at).toLocaleDateString()}
+              </td>
+              <td className="p-2">
+                {new Date(sol.updated_at).toLocaleDateString()}
+              </td>
               <td className="p-2">{sol.estadoSolicitud}</td>
               <td className="p-2">
                 <button
@@ -132,7 +137,9 @@ const MisSolicitudes = () => {
           ))}
           {solicitudes.length === 0 && (
             <tr>
-              <td colSpan="5" className="p-4 text-center text-gray-400">No hay resultados</td>
+              <td colSpan="5" className="p-4 text-center text-gray-400">
+                No hay resultados
+              </td>
             </tr>
           )}
         </tbody>
@@ -154,12 +161,13 @@ const MisSolicitudes = () => {
               sede={solicitudSeleccionada.sede}
               usuario={usuario}
               resumenSolicitud={solicitudSeleccionada.detalle ?? []}
+              estadoSolicitud={solicitudSeleccionada.solicitud.estadoSolicitud}
             />
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export default MisSolicitudes

@@ -1,11 +1,12 @@
-<?php
+<?php 
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Sanctum\Http\Controllers\CsrfCookieController;
-
+use App\Http\Controllers\EntregaPDFController; // ✅ Asegúrate de importar el controlador
+use App\Http\Controllers\DocumentoEntregaController;
 // ✅ Ruta necesaria para Sanctum: CSRF Cookie
 Route::get('/sanctum/csrf-cookie', [CsrfCookieController::class, 'show']);
 
@@ -34,7 +35,7 @@ Route::middleware('auth')->group(function () {
 // 🛠️ Rutas de autenticación generadas por Breeze/Fortify/etc.
 require __DIR__.'/auth.php';
 
-//Prueba pdf
+// Prueba PDF
 use Barryvdh\DomPDF\Facade\Pdf;
 
 Route::get('/test-pdf', function () {
@@ -60,3 +61,6 @@ Route::get('/test-pdf', function () {
     return $pdf->download('resumen.pdf');
 });
 
+// ✅ Ruta firmada para descarga segura del PDF
+Route::get('/descargar-entrega', [EntregaPDFController::class, 'descargarPublico'])->name('descargar.pdf.entrega');
+Route::get('/descargar-pdf/{documento}', [DocumentoEntregaController::class, 'descargar']);

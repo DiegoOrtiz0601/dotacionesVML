@@ -1,76 +1,96 @@
-import React, { useState, useEffect } from 'react'
-import Swal from 'sweetalert2'
-import api from '../../api/axios'
-import ResumenEntrega from './ResumenEntrega'
-import { obtenerEmpresasYSedes } from '../../api/utils'
-import { Search, Eye, ArrowLeft } from 'lucide-react'
+import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
+import api from "../../api/axios";
+import ResumenEntrega from "./ResumenEntrega";
+import { obtenerEmpresasYSedes } from "../../api/utils";
+import { Search, Eye, ArrowLeft } from "lucide-react";
 
 const EntregaSolicitud = () => {
-  const [empresas, setEmpresas] = useState([])
-  const [sedes, setSedes] = useState([])
-  const [solicitudes, setSolicitudes] = useState([])
-  const [empresaSeleccionada, setEmpresaSeleccionada] = useState('')
-  const [sedeSeleccionada, setSedeSeleccionada] = useState('')
-  const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null)
-  const [usuario, setUsuario] = useState(null)
+  const [empresas, setEmpresas] = useState([]);
+  const [sedes, setSedes] = useState([]);
+  const [solicitudes, setSolicitudes] = useState([]);
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState("");
+  const [sedeSeleccionada, setSedeSeleccionada] = useState("");
+  const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null);
+  const [usuario, setUsuario] = useState(null);
 
   useEffect(() => {
     const cargarDatos = async () => {
       try {
         const [usuarioRes, empresaSedeRes] = await Promise.all([
-          api.get('/usuario-autenticado'),
-          obtenerEmpresasYSedes()
-        ])
-        setUsuario(usuarioRes.data)
-        setEmpresas(empresaSedeRes.empresas)
-        setSedes(empresaSedeRes.sedes)
+          api.get("/usuario-autenticado"),
+          obtenerEmpresasYSedes(),
+        ]);
+        setUsuario(usuarioRes.data);
+        setEmpresas(empresaSedeRes.empresas);
+        setSedes(empresaSedeRes.sedes);
       } catch (error) {
-        console.error('❌ Error cargando usuario o empresas:', error)
+        console.error("❌ Error cargando usuario o empresas:", error);
       }
-    }
-    cargarDatos()
-  }, [])
+    };
+    cargarDatos();
+  }, []);
 
   const cargarSolicitudes = async () => {
     if (!empresaSeleccionada) {
       Swal.fire({
-        icon: 'warning',
-        title: 'Falta seleccionar empresa',
-        text: 'Debe seleccionar al menos una empresa para continuar.'
-      })
-      return
+        icon: "warning",
+        title: "Falta seleccionar empresa",
+        text: "Debe seleccionar al menos una empresa para continuar.",
+      });
+      return;
     }
 
     try {
-      const response = await api.get('/solicitudes-entrega', {
+      const response = await api.get("/solicitudes-entrega", {
         params: {
           idEmpresa: empresaSeleccionada,
-          idSede: sedeSeleccionada
-        }
-      })
+          idSede: sedeSeleccionada,
+        },
+      });
 
       if (response.data.length === 0) {
-        const empresaNombre = empresas.find(emp => emp.IdEmpresa == empresaSeleccionada)?.NombreEmpresa || 'la empresa'
-        const sedeNombre = sedes.find(s => s.IdSede == sedeSeleccionada)?.NombreSede || 'todas las sedes'
+        const empresaNombre =
+          empresas.find((emp) => emp.IdEmpresa == empresaSeleccionada)
+            ?.NombreEmpresa || "la empresa";
+        const sedeNombre =
+          sedes.find((s) => s.IdSede == sedeSeleccionada)?.NombreSede ||
+          "todas las sedes";
 
         Swal.fire({
-          icon: 'info',
-          title: 'Sin solicitudes',
-          text: `No hay solicitudes pendientes para ${empresaNombre} en ${sedeNombre}.`
-        })
+          icon: "info",
+          title: "Sin solicitudes",
+          text: `No hay solicitudes pendientes para ${empresaNombre} en ${sedeNombre}.`,
+        });
       }
 
-      setSolicitudes(response.data)
+      setSolicitudes(response.data);
     } catch (error) {
-      console.error('❌ Error cargando solicitudes:', error)
+      console.error("❌ Error cargando solicitudes:", error);
     }
-  }
+  };
 
   const manejarCambioEmpresa = (e) => {
-    const nuevaEmpresa = e.target.value
-    setEmpresaSeleccionada(nuevaEmpresa)
-    setSedeSeleccionada('')
-  }
+    const nuevaEmpresa = e.target.value;
+    setEmpresaSeleccionada(nuevaEmpresa);
+    setSedeSeleccionada("");
+  };
+
+  // 🔄 Este se encarga de actualizar los empleados que faltan por entregar
+  const onCerrarEmpleadoEntregado = (empleadoEntregado) => {
+    const restantes = solicitudSeleccionada.empleados.filter(
+      (e) => e.documento !== empleadoEntregado.documento
+    );
+    if (restantes.length === 0) {
+      setSolicitudSeleccionada(null);
+      cargarSolicitudes(); // 🔁 Refresca el listado general
+    } else {
+      setSolicitudSeleccionada({
+        ...solicitudSeleccionada,
+        empleados: restantes,
+      });
+    }
+  };
 
   return (
     <div className="p-6">
@@ -85,22 +105,26 @@ const EntregaSolicitud = () => {
               onChange={manejarCambioEmpresa}
             >
               <option value="">Seleccione empresa</option>
-              {empresas.map(emp => (
-                <option key={emp.IdEmpresa} value={emp.IdEmpresa}>{emp.NombreEmpresa}</option>
+              {empresas.map((emp) => (
+                <option key={emp.IdEmpresa} value={emp.IdEmpresa}>
+                  {emp.NombreEmpresa}
+                </option>
               ))}
             </select>
 
             <select
               className="border px-3 py-2 rounded w-1/3"
               value={sedeSeleccionada}
-              onChange={e => setSedeSeleccionada(e.target.value)}
+              onChange={(e) => setSedeSeleccionada(e.target.value)}
               disabled={!empresaSeleccionada}
             >
               <option value="">Seleccione sede</option>
               {sedes
-                .filter(s => s.IdEmpresa == empresaSeleccionada)
-                .map(s => (
-                  <option key={s.IdSede} value={s.IdSede}>{s.NombreSede}</option>
+                .filter((s) => s.IdEmpresa == empresaSeleccionada)
+                .map((s) => (
+                  <option key={s.IdSede} value={s.IdSede}>
+                    {s.NombreSede}
+                  </option>
                 ))}
             </select>
 
@@ -124,12 +148,17 @@ const EntregaSolicitud = () => {
               </tr>
             </thead>
             <tbody>
-              {solicitudes.map(sol => (
-                <tr key={sol.id} className="border-t hover:bg-gray-50 transition-all">
+              {solicitudes.map((sol) => (
+                <tr
+                  key={sol.id}
+                  className="border-t hover:bg-gray-50 transition-all"
+                >
                   <td className="p-2">{sol.codigoSolicitud}</td>
                   <td className="p-2">{sol.empresa}</td>
                   <td className="p-2">{sol.sede}</td>
-                  <td className="p-2">{new Date(sol.fecha_aprobacion).toLocaleDateString()}</td>
+                  <td className="p-2">
+                    {new Date(sol.fecha_aprobacion).toLocaleDateString()}
+                  </td>
                   <td className="p-2">
                     <button
                       onClick={() => setSolicitudSeleccionada(sol)}
@@ -143,7 +172,9 @@ const EntregaSolicitud = () => {
               ))}
               {solicitudes.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="p-4 text-center text-gray-400">No hay resultados</td>
+                  <td colSpan="5" className="p-4 text-center text-gray-400">
+                    No hay resultados
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -152,17 +183,50 @@ const EntregaSolicitud = () => {
       ) : (
         <>
           <ResumenEntrega
-            numeroSolicitud={solicitudSeleccionada.codigoSolicitud}
-            empresa={solicitudSeleccionada.empresa}
-            sede={solicitudSeleccionada.sede}
-            usuario={usuario}
-            logo={solicitudSeleccionada.ruta_logo}
-            nit={solicitudSeleccionada.NitEmpresa}
-            ResumenEntrega={solicitudSeleccionada.empleados ?? []}
-          />
+  numeroSolicitud={solicitudSeleccionada.codigoSolicitud}
+  empresa={solicitudSeleccionada.empresa}
+  sede={solicitudSeleccionada.sede}
+  usuario={usuario}
+  logo={solicitudSeleccionada.ruta_logo}
+  nit={solicitudSeleccionada.NitEmpresa}
+  ResumenEntrega={solicitudSeleccionada.empleados ?? []}
+  onCerrarEmpleadoEntregado={async () => {
+    try {
+      const response = await api.get("/solicitudes-entrega", {
+        params: {
+          idEmpresa: solicitudSeleccionada.idEmpresa,
+          idSede: solicitudSeleccionada.idSede,
+        },
+      });
+
+      const solicitudActualizada = response.data.find(
+        (s) => s.id === solicitudSeleccionada.id
+      );
+
+      if (!solicitudActualizada || solicitudActualizada.empleados.length === 0) {
+        Swal.fire({
+          icon: "success",
+          title: "Solicitud completada",
+          text: "Todos los empleados han recibido su dotación.",
+        });
+        setSolicitudSeleccionada(null);
+        cargarSolicitudes(); // 🔄 Refresca listado completo
+      } else {
+        setSolicitudSeleccionada(solicitudActualizada); // 🔁 Carga solo los no entregados
+      }
+    } catch (error) {
+      console.error("❌ Error recargando solicitud:", error);
+      setSolicitudSeleccionada(null);
+    }
+  }}
+/>
+
           <div className="mt-6 text-center">
             <button
-              onClick={() => setSolicitudSeleccionada(null)}
+              onClick={() => {
+                setSolicitudSeleccionada(null);
+                cargarSolicitudes();
+              }}
               className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded transition-all duration-300"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -172,7 +236,7 @@ const EntregaSolicitud = () => {
         </>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default EntregaSolicitud
+export default EntregaSolicitud;

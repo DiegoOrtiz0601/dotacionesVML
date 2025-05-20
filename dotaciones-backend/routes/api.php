@@ -24,11 +24,13 @@ use App\Http\Controllers\TblDetalleSolicitudElementoController;
 use App\Http\Controllers\TblElementosDotacionController;
 use App\Http\Controllers\TblElementoController;
 use App\Http\Controllers\TblEvidenciaTemporalController;
+use App\Http\Controllers\DocumentoEntregaController;
 
 // NUEVO: Controlador API personalizado
 use App\Http\Controllers\MisSolicitudesController;
 
 use App\Http\Controllers\EntregaPDFController;
+use App\Http\Controllers\EntregaSolicitudController;
 
 // ─────────────────────────────────────────────────────────────
 // 🟢 1. Ruta de login (fuera del middleware Sanctum)
@@ -85,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // 📥 Módulo: Mis Solicitudes
     Route::get('/mis-solicitudes', [MisSolicitudesController::class, 'index']);
     Route::get('/mis-solicitudes/{id}', [MisSolicitudesController::class, 'show']);
+    Route::get('/documento-entrega/{codigoSolicitud}', [DocumentoEntregaController::class, 'descargar']);
     
     // 📥 Módulo: Gestionar solicitudes
     Route::get('/solicitudes-gestion', [TblSolicitudController::class, 'indexGestionar']);
@@ -94,8 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Modulo:Entrega Solicitudes ROL.Usuario
     
-    Route::get('/solicitudes-entrega', [TblSolicitudController::class, 'solicitudesParaEntrega']);
-
+    Route::get('/solicitudes-entrega', [EntregaSolicitudController::class, 'solicitudesParaEntrega']);
     // pdf desde backend
 
     Route::post('/generar-pdf-entrega', [EntregaPDFController::class, 'generar']);

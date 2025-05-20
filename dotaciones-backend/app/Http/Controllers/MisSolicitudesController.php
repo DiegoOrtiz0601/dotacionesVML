@@ -84,6 +84,7 @@ class MisSolicitudesController extends Controller
                 'd.documentoEmpleado',
                 'd.IdTipoSolicitud',
                 'd.observaciones',
+                'd.rutaArchivoSolicitudEmpleado', // ✅ nuevo
                 'c.NombreCargo as cargo'
             )
             ->get();
