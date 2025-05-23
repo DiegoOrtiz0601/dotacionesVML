@@ -63,13 +63,14 @@ const WizardSolicitudDotacion = () => {
   };
 
   const modificarEmpleado = (index) => {
-    const empleado = resumenSolicitud[index];
-    setEmpleadoActual(empleado);
-    setCargoSeleccionado(empleado.idCargo || "");
-    setElementosEditados(empleado.elementos || []);
-    setResumenSolicitud((prev) => prev.filter((_, i) => i !== index));
-    setPasoActual(3);
-  };
+  const empleado = resumenSolicitud[index];
+  setEmpleadoActual(empleado);
+  setCargoSeleccionado(empleado.idCargo || "");
+  setElementosEditados(empleado.elementos || []);
+  setResumenSolicitud((prev) => prev.filter((_, i) => i !== index));
+  setFormularioVisible(true); // 👈 esta es la línea faltante
+  setPasoActual(3);
+};
 
   const eliminarEmpleado = (index) => {
     const nuevos = [...resumenSolicitud];
@@ -265,7 +266,7 @@ const WizardSolicitudDotacion = () => {
         onEliminarEmpleado={eliminarEmpleado}
       />
 
-      {cargando && <Loader />}
+      {cargando && <Loader mensaje="Guardando la solicitud por favor espere"/>}
     </>
   );
 };

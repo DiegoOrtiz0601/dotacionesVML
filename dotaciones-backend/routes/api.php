@@ -94,7 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/solicitudes/{id}', [TblSolicitudController::class, 'show']);
     Route::put('/solicitudes/{id}/elementos', [TblSolicitudController::class, 'actualizarElementos']);
     Route::post('/solicitudes/{id}/aprobar', [TblSolicitudController::class, 'aprobar']);
-
+    Route::post('/solicitudes/{id}/rechazar', [TblSolicitudController::class, 'rechazar']);
     // Modulo:Entrega Solicitudes ROL.Usuario
     
     Route::get('/solicitudes-entrega', [EntregaSolicitudController::class, 'solicitudesParaEntrega']);

@@ -37,7 +37,7 @@ function ResumenSolicitud({
             <p><strong>Solicitud:</strong> {numeroSolicitud}</p>
           </div>
           <div className="text-center">
-            <h3 className="text-xl font-bold text-primario">🧾 Formato de Solicitud de Dotación</h3>
+            <h3 className="text-xl font-bold text-primario">🧾 Formato de solicitud de dotación</h3>
           </div>
           <div className="w-28 h-16 flex justify-end">
             {logoUrl && <img src={logoUrl} alt="Logo empresa" className="object-contain h-full" />}

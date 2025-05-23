@@ -11,5 +11,5 @@ class TblDetalleSolicitudEmpleado extends Model
 
     protected $table = 'tbl_detalle_solicitud_empleado';
     protected $primaryKey = 'idDetalleSolicitud';
-    protected $fillable = ['idSolicitud', 'documentoEmpleado', 'nombreEmpleado', 'idCargo', 'IdTipoSolicitud', 'EstadoSolicitudEmpleado', 'fechaActualizacionSolicitud', 'rutaArchivoSolicitudEmpleado'];
+    protected $fillable = ['idSolicitud', 'documentoEmpleado', 'nombreEmpleado', 'idCargo', 'IdTipoSolicitud', 'EstadoSolicitudEmpleado', 'fechaActualizacionSolicitud', 'rutaArchivoSolicitudEmpleado', 'observaciones'];
 }

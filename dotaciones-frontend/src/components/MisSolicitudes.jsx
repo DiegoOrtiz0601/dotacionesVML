@@ -1,65 +1,81 @@
-import { useEffect, useState } from 'react'
-import api from '../api/axios'
-import ResumenSolicitudVista from './wizardSolicitud/ResumenSolicitudVista'
-import { obtenerEmpresasYSedes } from '../api/utils'
+import { useEffect, useState } from "react";
+import api from "../api/axios";
+import ResumenSolicitudVista from "./wizardSolicitud/ResumenSolicitudVista";
+import { obtenerEmpresasYSedes } from "../api/utils";
+import Swal from "sweetalert2";
 
 const MisSolicitudes = () => {
-  const [empresas, setEmpresas] = useState([])
-  const [sedes, setSedes] = useState([])
-  const [solicitudes, setSolicitudes] = useState([])
-  const [empresaSeleccionada, setEmpresaSeleccionada] = useState('')
-  const [sedeSeleccionada, setSedeSeleccionada] = useState('')
-  const [modalVisible, setModalVisible] = useState(false)
-  const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null)
-  const [usuario, setUsuario] = useState(null)
+  const [mensajeError, setMensajeError] = useState("");
+  const [empresas, setEmpresas] = useState([]);
+  const [sedes, setSedes] = useState([]);
+  const [solicitudes, setSolicitudes] = useState([]);
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState("");
+  const [sedeSeleccionada, setSedeSeleccionada] = useState("");
+  const [modalVisible, setModalVisible] = useState(false);
+  const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null);
+  const [usuario, setUsuario] = useState(null);
 
   useEffect(() => {
     const cargarDatos = async () => {
       try {
         const [usuarioRes, empresaSedeRes] = await Promise.all([
-          api.get('/usuario-autenticado'),
-          obtenerEmpresasYSedes()
-        ])
+          api.get("/usuario-autenticado"),
+          obtenerEmpresasYSedes(),
+        ]);
 
-        setUsuario(usuarioRes.data)
-        setEmpresas(empresaSedeRes.empresas)
-        setSedes(empresaSedeRes.sedes)
+        setUsuario(usuarioRes.data);
+        setEmpresas(empresaSedeRes.empresas);
+        setSedes(empresaSedeRes.sedes);
       } catch (error) {
-        console.error('❌ Error cargando datos:', error)
+        console.error("❌ Error cargando datos:", error);
       }
-    }
-    cargarDatos()
-  }, [])
+    };
+    cargarDatos();
+  }, []);
 
-  const cargarSolicitudes = async () => {
-    try {
-      const response = await api.get('/mis-solicitudes', {
-        params: {
-          idEmpresa: empresaSeleccionada,
-          idSede: sedeSeleccionada
-        }
-      })
-      setSolicitudes(response.data)
-    } catch (error) {
-      console.error('❌ Error cargando solicitudes:', error)
-    }
+ const cargarSolicitudes = async () => {
+  if (!empresaSeleccionada) {
+    Swal.fire({
+      icon: "warning",
+      title: "Empresa no seleccionada",
+      text: "⚠️ Debes seleccionar una empresa para realizar la búsqueda.",
+      confirmButtonColor: "#f59e0b" // un amarillo tipo warning
+    });
+    return;
   }
+
+  try {
+    const params = { idEmpresa: empresaSeleccionada };
+    if (sedeSeleccionada) {
+      params.idSede = sedeSeleccionada;
+    }
+
+    const response = await api.get('/mis-solicitudes', { params });
+    setSolicitudes(response.data);
+  } catch (error) {
+    console.error('❌ Error cargando solicitudes:', error);
+  }
+};
+
 
   const verDetalle = async (solicitud) => {
     try {
-      const response = await api.get(`/mis-solicitudes/${solicitud.id}`)
-      console.log('📦 Datos completos de la solicitud seleccionada:', response.data)
-      setSolicitudSeleccionada(response.data)
-      setModalVisible(true)
+      const response = await api.get(`/mis-solicitudes/${solicitud.id}`);
+      console.log(
+        "📦 Datos completos de la solicitud seleccionada:",
+        response.data
+      );
+      setSolicitudSeleccionada(response.data);
+      setModalVisible(true);
     } catch (error) {
-      console.error('❌ Error al cargar el detalle:', error)
+      console.error("❌ Error al cargar el detalle:", error);
     }
-  }
+  };
 
   const cerrarModal = () => {
-    setModalVisible(false)
-    setSolicitudSeleccionada(null)
-  }
+    setModalVisible(false);
+    setSolicitudSeleccionada(null);
+  };
 
   return (
     <div className="p-6">
@@ -102,7 +118,7 @@ const MisSolicitudes = () => {
           Buscar
         </button>
       </div>
-
+     
       {/* Tabla de resultados */}
       <table className="min-w-full border rounded shadow text-sm">
         <thead className="bg-gray-200">
@@ -162,12 +178,13 @@ const MisSolicitudes = () => {
               usuario={usuario}
               resumenSolicitud={solicitudSeleccionada.detalle ?? []}
               estadoSolicitud={solicitudSeleccionada.solicitud.estadoSolicitud}
+              motivoRechazo={solicitudSeleccionada.solicitud.motivoRechazo}
             />
           </div>
         </div>
       )}
     </div>
   );
-}
+};
 
-export default MisSolicitudes
+export default MisSolicitudes;

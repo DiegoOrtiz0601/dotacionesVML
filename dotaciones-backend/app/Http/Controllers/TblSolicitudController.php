@@ -68,7 +68,7 @@ class TblSolicitudController extends Controller
     public function show($id)
     {
         try {
-            // Información general de la solicitud
+            // 1. Info básica de solicitud
             $solicitud = DB::table('tbl_solicitudes as s')
                 ->leftJoin('tbl_usuarios_sistema as u', 'u.idUsuario', '=', 's.idUsuario')
                 ->leftJoin('tbl_empresa as e', 'e.IdEmpresa', '=', 's.idEmpresa')
@@ -78,6 +78,7 @@ class TblSolicitudController extends Controller
                     's.id as idSolicitud',
                     's.codigoSolicitud as codigo',
                     's.estadoSolicitud',
+                    's.MotivoRechazo',
                     'u.NombresUsuarioAutorizado as nombreSolicitante',
                     'e.NombreEmpresa as empresa',
                     'sd.NombreSede as sede'
@@ -88,7 +89,7 @@ class TblSolicitudController extends Controller
                 return response()->json(['message' => 'Solicitud no encontrada'], 404);
             }
 
-            // Obtener empleados con su tipo de solicitud
+            // 2. Empleados
             $empleadosRaw = DB::table('tbl_detalle_solicitud_empleado as de')
                 ->leftJoin('tbl_tipo_solicitud as ts', 'ts.idTipoSolicitud', '=', 'de.idTipoSolicitud')
                 ->where('de.idSolicitud', $id)
@@ -104,7 +105,7 @@ class TblSolicitudController extends Controller
 
             $documentos = $empleadosRaw->pluck('documentoEmpleado');
 
-            // Obtener elementos asociados
+            // 3. Elementos por documento
             $elementosRaw = DB::table('tbl_detalle_solicitud_elemento as d')
                 ->join('tbl_elementos as el', 'el.idElemento', '=', 'd.idElemento')
                 ->join('tbl_detalle_solicitud_empleado as de', 'de.idDetalleSolicitud', '=', 'd.idDetalleSolicitud')
@@ -119,55 +120,38 @@ class TblSolicitudController extends Controller
                 ->get()
                 ->groupBy('documentoEmpleado');
 
-            // Mapear empleados con sus elementos y tipoSolicitud
-            $empleados = $empleadosRaw->map(function ($emp) use ($elementosRaw) {
-                return [
-                    'nombreEmpleado' => $emp->nombreEmpleado,
-                    'documentoEmpleado' => $emp->documentoEmpleado,
-                    'tipoSolicitud' => $emp->tipoSolicitud ?? 'No definido',
-                    'observaciones' => $emp->observaciones,
-                    'rutaArchivoSolicitudEmpleado' => $emp->rutaArchivoSolicitudEmpleado, // ✅ NUEVO
-                    'elementos' => $elementosRaw[$emp->documentoEmpleado]->map(function ($el) {
-                        return [
-                            'id' => $el->id,
-                            'nombreElemento' => $el->nombreElemento,
-                            'talla' => $el->talla,
-                            'cantidadSolicitada' => $el->cantidadSolicitada
-                        ];
-                    })->values()
-                ];
-            });
+            // 4. Evidencias por documento
+            $requiereEvidencias = $empleadosRaw->contains(fn($emp) => strtolower($emp->tipoSolicitud ?? '') !== 'solicitud nueva');
+            $evidenciasPorDocumento = collect();
 
-            // Si alguno de los empleados no tiene tipo 'Solicitud nueva', cargar evidencias
-            $requiereEvidencias = $empleados->contains(fn($emp) => strtolower($emp['tipoSolicitud']) !== 'solicitud nueva');
-
-            $evidencias = [];
             if ($requiereEvidencias) {
                 $evidenciasCrudas = DB::table('tbl_evidencias_temporales')
                     ->where('idSolicitud', $id)
-                    ->select('nombreArchivoOriginal', 'rutaArchivo')
+                    ->select('nombreArchivoOriginal', 'rutaArchivo', 'documentoEmpleado')
                     ->get();
 
-                $evidencias = $evidenciasCrudas->map(function ($evi) {
+                $evidenciasPorDocumento = $evidenciasCrudas->map(function ($evi) {
                     $rutaRelativa = $evi->rutaArchivo;
                     return [
+                        'documentoEmpleado' => $evi->documentoEmpleado,
                         'nombreArchivo' => $evi->nombreArchivoOriginal,
                         'url' => asset('storage/' . str_replace('storage/', '', $rutaRelativa)),
                         'existe' => true
                     ];
-                });
+                })->groupBy('documentoEmpleado');
             }
 
-            // Historial por documento (solo si hay uno principal)
-            $historial = [];
-            if ($documentos->count() === 1) {
-                $documentoEmpleado = $documentos->first();
-                $historial = DB::table('tbl_detalle_solicitud_empleado as d')
+            // 5. Historial por documentoEmpleado
+            $historialPorDocumento = [];
+
+            foreach ($documentos as $documentoEmpleado) {
+                $historialEmpleado = DB::table('tbl_detalle_solicitud_empleado as d')
                     ->join('tbl_solicitudes as s', 's.id', '=', 'd.idSolicitud')
                     ->where('d.documentoEmpleado', $documentoEmpleado)
                     ->where('d.idSolicitud', '!=', $id)
                     ->select(
                         'd.idSolicitud',
+                        'd.documentoEmpleado',
                         's.codigoSolicitud',
                         'd.created_at as fecha',
                         DB::raw("CONCAT('Estado: ', s.estadoSolicitud,
@@ -181,26 +165,46 @@ class TblSolicitudController extends Controller
                             ->join('tbl_elementos as el', 'el.idElemento', '=', 'dse.idElemento')
                             ->join('tbl_detalle_solicitud_empleado as de', 'de.idDetalleSolicitud', '=', 'dse.idDetalleSolicitud')
                             ->where('de.idSolicitud', $item->idSolicitud)
+                            ->where('de.documentoEmpleado', $item->documentoEmpleado)
                             ->select('el.nombreElemento', 'dse.TallaElemento as talla', 'dse.cantidad')
                             ->get();
                         return $item;
                     });
 
-                if ($historial->isEmpty()) {
-                    $historial = [[
+                $historialPorDocumento[$documentoEmpleado] = $historialEmpleado->isEmpty()
+                    ? [[
                         'fecha' => now()->format('Y-m-d H:i'),
                         'evento' => 'No hay solicitudes antiguas para este empleado.',
                         'codigoSolicitud' => null,
                         'elementos' => []
-                    ]];
-                }
+                    ]]
+                    : $historialEmpleado;
             }
+
+            // 6. Mapear empleados con historial, elementos, evidencias
+            $empleados = $empleadosRaw->map(function ($emp) use ($elementosRaw, $evidenciasPorDocumento, $historialPorDocumento) {
+                return [
+                    'nombreEmpleado' => $emp->nombreEmpleado,
+                    'documentoEmpleado' => $emp->documentoEmpleado,
+                    'tipoSolicitud' => $emp->tipoSolicitud ?? 'No definido',
+                    'observaciones' => $emp->observaciones,
+                    'rutaArchivoSolicitudEmpleado' => $emp->rutaArchivoSolicitudEmpleado,
+                    'evidencias' => $evidenciasPorDocumento[$emp->documentoEmpleado] ?? [],
+                    'elementos' => $elementosRaw[$emp->documentoEmpleado]->map(function ($el) {
+                        return [
+                            'id' => $el->id,
+                            'nombreElemento' => $el->nombreElemento,
+                            'talla' => $el->talla,
+                            'cantidadSolicitada' => $el->cantidadSolicitada
+                        ];
+                    })->values(),
+                    'historial' => $historialPorDocumento[$emp->documentoEmpleado] ?? []
+                ];
+            });
 
             return response()->json([
                 ...(array) $solicitud,
-                'evidencias' => $evidencias,
-                'empleados' => $empleados,
-                'historial' => $historial,
+                'empleados' => $empleados
             ]);
         } catch (\Exception $e) {
             Log::error("❌ Error interno en show(): " . $e->getMessage(), [
@@ -209,8 +213,6 @@ class TblSolicitudController extends Controller
             return response()->json(['message' => 'Error interno del servidor.'], 500);
         }
     }
-
-
 
     // Actualiza datos básicos de la solicitud
     public function update(Request $request, $id)
@@ -426,4 +428,38 @@ class TblSolicitudController extends Controller
             return response()->json(['message' => 'Error interno del servidor.'], 500);
         }
     }
+    public function rechazar(Request $request, $id)
+{
+    $request->validate([
+        'motivo' => 'required|string|max:255',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        // Rechazar solicitud general
+        DB::table('tbl_solicitudes')
+            ->where('id', $id)
+            ->update([
+                'estadoSolicitud' => 'Rechazado',
+                'MotivoRechazo' => $request->motivo,
+                'updated_at' => now(),
+            ]);
+
+        // Rechazar cada empleado
+        DB::table('tbl_detalle_solicitud_empleado')
+            ->where('idSolicitud', $id)
+            ->update([
+                'EstadoSolicitudEmpleado' => 'Rechazado',
+                'updated_at' => now(),
+            ]);
+
+        DB::commit();
+        return response()->json(['message' => 'Solicitud rechazada exitosamente']);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error("❌ Error al rechazar solicitud: " . $e->getMessage());
+        return response()->json(['message' => 'Error al rechazar solicitud'], 500);
+    }
+}
+
 }

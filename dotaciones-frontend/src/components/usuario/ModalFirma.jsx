@@ -1,4 +1,3 @@
-// src/components/usuario/ModalFirma.jsx
 import React from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { Trash2, FileSignature, XCircle, TabletSmartphone } from "lucide-react";
@@ -14,22 +13,26 @@ const ModalFirma = ({
   limpiarFirma,
   guardarFirma,
   capturarFirmaDesdeEPAD,
-  setMostrarFirma
+  setMostrarFirma,
 }) => (
   <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
     <div className="bg-white p-6 rounded shadow-xl w-full max-w-lg">
-      <div className="flex justify-between items-center mb-4">
-        <p className="font-semibold">Seleccione método de firma:</p>
-        <select
-          className="border rounded px-2 py-1"
-          value={modoFirma}
-          onChange={(e) => setModoFirma(e.target.value)}
-        >
-          <option value="canvas">Dibujar firma</option>
-          <option value="epad">Capturar desde ePad</option>
-        </select>
-      </div>
+      {/* Selector de método */}
+      <div className="mb-6">
+  <div className="flex justify-between items-center">
+    <p className="font-semibold">Seleccione método de firma:</p>
+    <select
+      className="border rounded px-2 py-1"
+      value={modoFirma}
+      onChange={(e) => setModoFirma(e.target.value)}
+    >
+      <option value="canvas">Dibujar firma</option>
+      <option value="epad">Capturar desde ePad</option>
+    </select>
+  </div>
+</div>
 
+      {/* Firma en canvas */}
       {modoFirma === "canvas" && (
         <>
           <label className="block mb-2 text-sm font-medium">
@@ -45,7 +48,9 @@ const ModalFirma = ({
             className="mb-4 w-full"
           />
 
-          <label className="block mb-2 text-sm font-medium">Color del trazo</label>
+          <label className="block mb-2 text-sm font-medium">
+            Color del trazo
+          </label>
           <input
             type="color"
             value={colorFirma}
@@ -58,7 +63,9 @@ const ModalFirma = ({
             penColor={colorFirma}
             minWidth={grosorFirma}
             maxWidth={grosorFirma + 0.5}
-            canvasProps={{ width: 500, height: 150, className: "border" }}
+            canvasProps={{
+              className: "border w-full max-w-full h-[150px] rounded shadow-sm",
+            }}
           />
 
           <div className="mt-4 flex justify-end gap-3">
@@ -78,6 +85,7 @@ const ModalFirma = ({
         </>
       )}
 
+      {/* Firma desde ePad */}
       {modoFirma === "epad" && (
         <div className="flex flex-col items-center gap-4 mt-4">
           <button
@@ -89,6 +97,7 @@ const ModalFirma = ({
         </div>
       )}
 
+      {/* Botón cancelar */}
       <div className="mt-6 flex justify-center">
         <button
           onClick={() => setMostrarFirma(false)}

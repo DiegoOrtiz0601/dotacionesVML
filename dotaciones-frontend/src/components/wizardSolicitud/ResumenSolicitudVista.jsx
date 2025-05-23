@@ -8,6 +8,7 @@ function ResumenSolicitudVista({
   usuario,
   resumenSolicitud,
   estadoSolicitud,
+  motivoRechazo,
 }) {
   const [archivoModal, setArchivoModal] = useState(null);
 
@@ -70,6 +71,12 @@ function ResumenSolicitudVista({
           <p>
             <strong>Sede:</strong> {nombreSede}
           </p>
+          {estadoSolicitud === "Rechazado" && motivoRechazo && (
+  <div className="mb-6 bg-red-50 border-l-4 border-red-600 p-4 rounded">
+    <h4 className="text-red-800 font-bold">❌ Motivo del rechazo:</h4>
+    <p className="text-sm text-red-700 mt-1">{motivoRechazo}</p>
+  </div>
+)}
         </div>
 
         {/* 🧑 Empleados incluidos */}
