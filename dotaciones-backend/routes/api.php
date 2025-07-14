@@ -30,6 +30,7 @@ use App\Http\Controllers\DocumentoEntregaController;
 use App\Http\Controllers\MisSolicitudesController;
 use App\Http\Controllers\EntregaPDFController;
 use App\Http\Controllers\EntregaSolicitudController;
+use App\Http\Controllers\DashboardController;
 
 // ─────────────────────────────────────────────────────────────
 // 🟢 1. Ruta de login (fuera del middleware Sanctum)
@@ -45,6 +46,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 🔐 Logout
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // 📊 Dashboard
+    Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
 
     // 👤 Usuarios y datos básicos
     Route::apiResource('usuarios-sistema', TblUsuarioSistemaController::class);
