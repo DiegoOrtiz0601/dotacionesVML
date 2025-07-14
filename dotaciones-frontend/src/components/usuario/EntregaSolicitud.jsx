@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import api from "../../api/axios";
+import optimizedApi from "../../api/optimizedAxios";
 import ResumenEntrega from "./ResumenEntrega";
-import { obtenerEmpresasYSedes } from "../../api/utils";
+import { obtenerEmpresasYSedes, obtenerUsuarioAutenticado } from "../../api/utils";
 import { Search, Eye, ArrowLeft } from "lucide-react";
 
 const EntregaSolicitud = () => {
@@ -17,13 +17,13 @@ const EntregaSolicitud = () => {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [usuarioRes, empresaSedeRes] = await Promise.all([
-          api.get("/usuario-autenticado"),
+        const [usuarioData, empresaSedeData] = await Promise.all([
+          obtenerUsuarioAutenticado(),
           obtenerEmpresasYSedes(),
         ]);
-        setUsuario(usuarioRes.data);
-        setEmpresas(empresaSedeRes.empresas);
-        setSedes(empresaSedeRes.sedes);
+        setUsuario(usuarioData);
+        setEmpresas(empresaSedeData.empresas);
+        setSedes(empresaSedeData.sedes);
       } catch (error) {
         console.error("❌ Error cargando usuario o empresas:", error);
       }
@@ -42,28 +42,11 @@ const EntregaSolicitud = () => {
     }
 
     try {
-      const response = await api.get("/solicitudes-entrega", {
-        params: {
-          idEmpresa: empresaSeleccionada,
-          idSede: sedeSeleccionada,
-        },
-      });
-
-      if (response.data.length === 0) {
-        const empresaNombre =
-          empresas.find((emp) => emp.IdEmpresa == empresaSeleccionada)
-            ?.NombreEmpresa || "la empresa";
-        const sedeNombre =
-          sedes.find((s) => s.IdSede == sedeSeleccionada)?.NombreSede ||
-          "todas las sedes";
-
-        Swal.fire({
-          icon: "info",
-          title: "Sin solicitudes",
-          text: `No hay solicitudes pendientes para ${empresaNombre} en ${sedeNombre}.`,
-        });
-      }
-
+      const response = await optimizedApi.getCached("/solicitudes-entrega", {
+        idEmpresa: empresaSeleccionada,
+        idSede: sedeSeleccionada,
+      }, 1 * 60 * 1000); // 1 minuto de caché para solicitudes de entrega
+      
       setSolicitudes(response.data);
     } catch (error) {
       console.error("❌ Error cargando solicitudes:", error);
@@ -192,12 +175,10 @@ const EntregaSolicitud = () => {
   ResumenEntrega={solicitudSeleccionada.empleados ?? []}
   onCerrarEmpleadoEntregado={async () => {
     try {
-      const response = await api.get("/solicitudes-entrega", {
-        params: {
-          idEmpresa: solicitudSeleccionada.idEmpresa,
-          idSede: solicitudSeleccionada.idSede,
-        },
-      });
+      const response = await optimizedApi.getCached("/solicitudes-entrega", {
+        idEmpresa: solicitudSeleccionada.idEmpresa,
+        idSede: solicitudSeleccionada.idSede,
+      }, 1 * 60 * 1000); // 1 minuto de caché para solicitudes de entrega
 
       const solicitudActualizada = response.data.find(
         (s) => s.id === solicitudSeleccionada.id

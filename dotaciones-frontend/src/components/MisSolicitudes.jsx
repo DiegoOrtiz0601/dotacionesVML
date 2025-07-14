@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import api from "../api/axios";
+import optimizedApi from "../api/optimizedAxios";
 import ResumenSolicitudVista from "./wizardSolicitud/ResumenSolicitudVista";
-import { obtenerEmpresasYSedes } from "../api/utils";
+import { obtenerEmpresasYSedes, obtenerUsuarioAutenticado } from "../api/utils";
 import Swal from "sweetalert2";
 
 const MisSolicitudes = () => {
@@ -18,14 +18,14 @@ const MisSolicitudes = () => {
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [usuarioRes, empresaSedeRes] = await Promise.all([
-          api.get("/usuario-autenticado"),
+        const [usuarioData, empresaSedeData] = await Promise.all([
+          obtenerUsuarioAutenticado(),
           obtenerEmpresasYSedes(),
         ]);
 
-        setUsuario(usuarioRes.data);
-        setEmpresas(empresaSedeRes.empresas);
-        setSedes(empresaSedeRes.sedes);
+        setUsuario(usuarioData);
+        setEmpresas(empresaSedeData.empresas);
+        setSedes(empresaSedeData.sedes);
       } catch (error) {
         console.error("❌ Error cargando datos:", error);
       }
@@ -39,7 +39,7 @@ const MisSolicitudes = () => {
       icon: "warning",
       title: "Empresa no seleccionada",
       text: "⚠️ Debes seleccionar una empresa para realizar la búsqueda.",
-      confirmButtonColor: "#f59e0b" // un amarillo tipo warning
+      confirmButtonColor: "#f59e0b"
     });
     return;
   }
@@ -50,17 +50,16 @@ const MisSolicitudes = () => {
       params.idSede = sedeSeleccionada;
     }
 
-    const response = await api.get('/mis-solicitudes', { params });
+    const response = await optimizedApi.getCached('/mis-solicitudes', params, 2 * 60 * 1000); // 2 minutos de caché
     setSolicitudes(response.data);
   } catch (error) {
     console.error('❌ Error cargando solicitudes:', error);
   }
 };
 
-
   const verDetalle = async (solicitud) => {
     try {
-      const response = await api.get(`/mis-solicitudes/${solicitud.id}`);
+      const response = await optimizedApi.getCached(`/mis-solicitudes/${solicitud.id}`, {}, 1 * 60 * 1000); // 1 minuto de caché
       console.log(
         "📦 Datos completos de la solicitud seleccionada:",
         response.data

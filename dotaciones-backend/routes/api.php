@@ -26,9 +26,8 @@ use App\Http\Controllers\TblElementoController;
 use App\Http\Controllers\TblEvidenciaTemporalController;
 use App\Http\Controllers\DocumentoEntregaController;
 
-// NUEVO: Controlador API personalizado
+// Controladores especializados
 use App\Http\Controllers\MisSolicitudesController;
-
 use App\Http\Controllers\EntregaPDFController;
 use App\Http\Controllers\EntregaSolicitudController;
 
@@ -62,14 +61,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mis-empresas-sedes', [TblUsuarioEmpresaSedeController::class, 'getEmpresasYSedes']);
     Route::get('/cargos-por-empresa-sede', [TblUsuarioEmpresaSedeController::class, 'getCargosPorEmpresaYSede']);
 
-    // 📋 Tipos de solicitud
+    // 📋 Tipos de solicitud (eliminada duplicación)
     Route::apiResource('tipo-solicitud', TblTipoSolicitudController::class);
-    Route::get('/tipo-solicitud', [TblTipoSolicitudController::class, 'getTiposSolicitud']);
 
-    // 🧾 Solicitudes principales
+    // 🧾 Solicitudes principales (eliminada duplicación)
     Route::apiResource('solicitudes', TblSolicitudController::class);
     Route::get('/generar-numero-solicitud', [TblSolicitudController::class, 'generarNumeroSolicitud']);
-    Route::post('/solicitudes', [TblSolicitudController::class, 'store']); // Por claridad explícita
+    
+    // Rutas específicas de solicitudes
+    Route::get('/solicitudes-gestion', [TblSolicitudController::class, 'indexGestionar']);
+    Route::put('/solicitudes/{id}/elementos', [TblSolicitudController::class, 'actualizarElementos']);
+    Route::post('/solicitudes/{id}/aprobar', [TblSolicitudController::class, 'aprobar']);
+    Route::post('/solicitudes/{id}/rechazar', [TblSolicitudController::class, 'rechazar']);
 
     // 👥 Detalle de empleados por solicitud
     Route::post('/detalle-solicitud-empleado', [TblSolicitudEmpleadoController::class, 'agregarEmpleado']);
@@ -89,19 +92,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mis-solicitudes/{id}', [MisSolicitudesController::class, 'show']);
     Route::get('/documento-entrega/{codigoSolicitud}', [DocumentoEntregaController::class, 'descargar']);
     
-    // 📥 Módulo: Gestionar solicitudes
-    Route::get('/solicitudes-gestion', [TblSolicitudController::class, 'indexGestionar']);
-    Route::get('/solicitudes/{id}', [TblSolicitudController::class, 'show']);
-    Route::put('/solicitudes/{id}/elementos', [TblSolicitudController::class, 'actualizarElementos']);
-    Route::post('/solicitudes/{id}/aprobar', [TblSolicitudController::class, 'aprobar']);
-    Route::post('/solicitudes/{id}/rechazar', [TblSolicitudController::class, 'rechazar']);
-    // Modulo:Entrega Solicitudes ROL.Usuario
-    
+    // 📦 Módulo: Entrega Solicitudes
     Route::get('/solicitudes-entrega', [EntregaSolicitudController::class, 'solicitudesParaEntrega']);
-    // pdf desde backend
-
     Route::post('/generar-pdf-entrega', [EntregaPDFController::class, 'generar']);
-
-
 
 });
