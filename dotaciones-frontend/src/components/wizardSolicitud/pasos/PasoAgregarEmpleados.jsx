@@ -23,6 +23,7 @@ const PasoAgregarEmpleados = ({
   const [cargos, setCargos] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
+  const [consultandoHistorial, setConsultandoHistorial] = useState(false);
 
   // ✅ Control local del botón Siguiente
  const [botonLocalmenteHabilitado, setBotonLocalmenteHabilitado] = useState(false);
@@ -65,28 +66,41 @@ useEffect(() => {
     fetchData();
   }, [empresa, sede]);
 
-  useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      if (tipoSolicitudSeleccionado !== "1" && documentoEmpleado.length >= 5) {
-        consultarHistorial();
-      }
-    }, 500);
-    return () => clearTimeout(delayDebounce);
-  }, [documentoEmpleado, tipoSolicitudSeleccionado]);
+  // Removemos el useEffect que consulta automáticamente
+  // La consulta se hará solo cuando el usuario salga del campo documento
 
   const consultarHistorial = async () => {
     try {
+      setConsultandoHistorial(true);
+      console.log("🔍 Consultando historial para documento:", documentoEmpleado);
+      
       const response = await api.get("/historial-solicitudes", {
         params: { documento: documentoEmpleado },
       });
       setHistorialSolicitudes(response.data || []);
+      console.log("✅ Historial consultado exitosamente");
     } catch (error) {
       if (error.response?.status === 400) {
         console.warn("⚠️ No hay historial para este documento.");
         setHistorialSolicitudes([]);
       } else {
-        console.error("Error consultando historial:", error);
+        console.error("❌ Error consultando historial:", error);
       }
+    } finally {
+      setConsultandoHistorial(false);
+    }
+  };
+
+  const handleDocumentoBlur = () => {
+    // Solo consultar historial si:
+    // 1. El documento tiene al menos 5 caracteres
+    // 2. El tipo de solicitud no es "1" (nueva dotación)
+    // 3. El documento no está vacío
+    if (documentoEmpleado.length >= 5 && 
+        tipoSolicitudSeleccionado !== "1" && 
+        tipoSolicitudSeleccionado !== "" &&
+        documentoEmpleado.trim() !== "") {
+      consultarHistorial();
     }
   };
 
@@ -169,7 +183,9 @@ useEffect(() => {
             onChange={(e) =>
               setDocumentoEmpleado(e.target.value.replace(/\D/g, ""))
             }
+            onBlur={handleDocumentoBlur}
             className="w-full border border-gray-300 rounded px-3 py-2"
+            placeholder="Ej: 1234567890"
           />
         </div>
 
@@ -213,9 +229,16 @@ useEffect(() => {
           <div className="mb-4">
             <label className="block font-semibold text-sm mb-1">
               Historial de solicitudes
+              {consultandoHistorial && (
+                <span className="ml-2 text-blue-600 text-xs">
+                  🔍 Consultando...
+                </span>
+              )}
             </label>
             <select className="w-full border border-gray-300 rounded px-3 py-2">
-              {historialSolicitudes.length > 0 ? (
+              {consultandoHistorial ? (
+                <option value="">Consultando historial...</option>
+              ) : historialSolicitudes.length > 0 ? (
                 historialSolicitudes.map((s) => (
                   <option
                     key={s.idDetalleSolicitud}
@@ -225,7 +248,7 @@ useEffect(() => {
                   </option>
                 ))
               ) : (
-                <option value="">Sin solicitudes</option>
+                <option value="">Sin solicitudes previas</option>
               )}
             </select>
           </div>
