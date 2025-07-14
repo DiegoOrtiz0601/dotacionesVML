@@ -235,22 +235,45 @@ useEffect(() => {
                 </span>
               )}
             </label>
-            <select className="w-full border border-gray-300 rounded px-3 py-2">
-              {consultandoHistorial ? (
-                <option value="">Consultando historial...</option>
-              ) : historialSolicitudes.length > 0 ? (
-                historialSolicitudes.map((s) => (
-                  <option
-                    key={s.idDetalleSolicitud}
-                    value={s.idDetalleSolicitud}
-                  >
-                    {s.idDetalleSolicitud} - {s.nombreEmpleado}
-                  </option>
-                ))
-              ) : (
-                <option value="">Sin solicitudes previas</option>
-              )}
-            </select>
+            
+            {consultandoHistorial ? (
+              <div className="text-center py-4 text-gray-500">
+                🔍 Consultando historial...
+              </div>
+            ) : historialSolicitudes.length > 0 ? (
+              <div className="border border-gray-300 rounded p-3 bg-gray-50">
+                <div className="text-sm text-gray-600 mb-2">
+                  Se encontraron {historialSolicitudes.length} solicitudes previas:
+                </div>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {historialSolicitudes.map((s) => (
+                    <div key={s.idDetalleSolicitud} className="text-xs bg-white p-2 rounded border">
+                      <div className="font-semibold text-blue-600">
+                        {s.codigoSolicitud}
+                      </div>
+                      <div className="text-gray-700">
+                        {s.nombreEmpleado} - {s.tipoSolicitud}
+                      </div>
+                      <div className="text-gray-500">
+                        {s.NombreEmpresa} - {s.NombreSede}
+                      </div>
+                      <div className={`text-xs px-2 py-1 rounded inline-block mt-1 ${
+                        s.EstadoSolicitudEmpleado === 'Entregado' ? 'bg-green-100 text-green-800' :
+                        s.EstadoSolicitudEmpleado === 'Aprobado' ? 'bg-blue-100 text-blue-800' :
+                        s.EstadoSolicitudEmpleado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {s.EstadoSolicitudEmpleado}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-500 border border-gray-300 rounded">
+                ✅ Sin solicitudes previas para este documento
+              </div>
+            )}
           </div>
 
           <div className="mb-4">

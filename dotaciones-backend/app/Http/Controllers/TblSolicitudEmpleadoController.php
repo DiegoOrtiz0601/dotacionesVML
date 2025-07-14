@@ -76,23 +76,49 @@ if ($validated->fails()) {
         Log::info('📥 Consultando historial para documento:', ['documento' => $documento]);
 
         if (!$documento) {
+            Log::warning('❌ Documento no proporcionado en historialSolicitudes');
             return response()->json([
                 'error' => 'El documento del empleado es requerido'
             ], 400);
         }
 
-        $historial = DB::table('tbl_detalle_solicitud_empleado')
-           ->join('tbl_tipo_solicitud', 'tbl_detalle_solicitud_empleado.idTipoSolicitud', '=', 'tbl_tipo_solicitud.IdTipoSolicitud')
-
-            ->where('tbl_detalle_solicitud_empleado.documentoEmpleado', $documento)
+        // Consulta original con JOINs
+        $historial = DB::table('tbl_detalle_solicitud_empleado as dse')
+            ->join('tbl_tipo_solicitud as ts', 'dse.idTipoSolicitud', '=', 'ts.IdTipoSolicitud')
+            ->join('tbl_solicitudes as s', 'dse.idSolicitud', '=', 's.id')
+            ->join('tbl_empresa as e', 's.idEmpresa', '=', 'e.IdEmpresa')
+            ->join('tbl_sedes as sed', 's.idSede', '=', 'sed.IdSede')
+            ->where('dse.documentoEmpleado', $documento)
             ->select(
-                'tbl_detalle_solicitud_empleado.idDetalleSolicitud',
-                'tbl_tipo_solicitud.NombreTipo as tipo',
-                'tbl_detalle_solicitud_empleado.created_at',
-                'tbl_detalle_solicitud_empleado.EstadoSolicitudEmpleado'
+                'dse.idDetalleSolicitud',
+                'dse.nombreEmpleado',
+                'dse.documentoEmpleado',
+                'dse.EstadoSolicitudEmpleado',
+                'dse.created_at',
+                'ts.NombreTipo as tipoSolicitud',
+                's.idSolicitud as codigoSolicitud',
+                'e.NombreEmpresa',
+                'sed.NombreSede'
             )
-            ->orderByDesc('tbl_detalle_solicitud_empleado.created_at')
+            ->orderByDesc('dse.created_at')
+            ->limit(10)
             ->get();
+
+        // Si no hay resultados, consulta solo la tabla base
+        if ($historial->isEmpty()) {
+            Log::warning('⚠️ No se encontraron resultados con JOINs, probando consulta simple.');
+            $historial = DB::table('tbl_detalle_solicitud_empleado')
+                ->where('documentoEmpleado', $documento)
+                ->orderByDesc('created_at')
+                ->limit(10)
+                ->get();
+        }
+
+        Log::info('✅ Historial encontrado:', [
+            'documento' => $documento,
+            'cantidad' => $historial->count(),
+            'resultados' => $historial->toArray()
+        ]);
 
         return response()->json($historial);
     }
