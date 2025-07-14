@@ -24,6 +24,7 @@ const PasoAgregarEmpleados = ({
   const [mostrarModal, setMostrarModal] = useState(false);
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [consultandoHistorial, setConsultandoHistorial] = useState(false);
+  const [acordeonesAbiertos, setAcordeonesAbiertos] = useState(new Set());
 
   // ✅ Control local del botón Siguiente
  const [botonLocalmenteHabilitado, setBotonLocalmenteHabilitado] = useState(false);
@@ -35,6 +36,14 @@ useEffect(() => {
     tipoSolicitudSeleccionado !== '' &&
     cargoSeleccionado !== '' &&
     !isNaN(Number(cargoSeleccionado)); // Validar que no sea NaN
+
+  console.log('🔍 Validación del botón:', {
+    nombresEmpleado: nombresEmpleado?.trim(),
+    documentoEmpleado: documentoEmpleado?.trim(),
+    tipoSolicitudSeleccionado,
+    cargoSeleccionado,
+    habilitado
+  });
 
   setBotonLocalmenteHabilitado(habilitado);
 }, [
@@ -92,16 +101,40 @@ useEffect(() => {
   };
 
   const handleDocumentoBlur = () => {
-    // Solo consultar historial si:
+    // Consultar historial si:
     // 1. El documento tiene al menos 5 caracteres
-    // 2. El tipo de solicitud no es "1" (nueva dotación)
-    // 3. El documento no está vacío
-    if (documentoEmpleado.length >= 5 && 
-        tipoSolicitudSeleccionado !== "1" && 
-        tipoSolicitudSeleccionado !== "" &&
-        documentoEmpleado.trim() !== "") {
+    // 2. El documento no está vacío
+    if (documentoEmpleado.length >= 5 && documentoEmpleado.trim() !== "") {
+      console.log("🔍 Condiciones cumplidas, consultando historial...");
       consultarHistorial();
+    } else {
+      console.log("⚠️ No se consulta historial - documento muy corto o vacío");
     }
+  };
+
+  const toggleAcordeon = (idDetalleSolicitud) => {
+    setAcordeonesAbiertos(prev => {
+      const nuevo = new Set(prev);
+      if (nuevo.has(idDetalleSolicitud)) {
+        nuevo.delete(idDetalleSolicitud);
+      } else {
+        nuevo.add(idDetalleSolicitud);
+      }
+      return nuevo;
+    });
+  };
+
+  // Función para verificar si se deben mostrar campos adicionales
+  const debeMostrarCamposAdicionales = () => {
+    if (!tipoSolicitudSeleccionado) return false;
+    const tipoSeleccionado = tiposSolicitud.find(t => t.id == tipoSolicitudSeleccionado);
+    const nombre = tipoSeleccionado?.NombreTipo?.toLowerCase() || '';
+    
+    return (
+      nombre === 'solicitud cambio por talla' ||
+      nombre === 'solicitud cambio por perdida' ||
+      nombre === 'solicitud cambio por daño'
+    );
   };
 
   const manejarArchivo = (e) => {
@@ -126,6 +159,8 @@ useEffect(() => {
   };
 
   const continuar = () => {
+    console.log('🚀 Función continuar ejecutada');
+    
     const tipoSeleccionado = tiposSolicitud.find(
       (t) => t.id == tipoSolicitudSeleccionado
     );
@@ -141,9 +176,12 @@ useEffect(() => {
         tipoSeleccionado?.id || parseInt(tipoSolicitudSeleccionado),
       idCargo: cargoSeleccionado,
       cargo: nombreCargo,
-      observaciones,
-      evidencias,
+      // Solo incluir observaciones y evidencias si se deben mostrar campos adicionales
+      observaciones: debeMostrarCamposAdicionales() ? observaciones : '',
+      evidencias: debeMostrarCamposAdicionales() ? evidencias : [],
     };
+
+    console.log('📦 Datos del empleado:', datosEmpleado);
 
     if (setEmpleadoActual) {
       setEmpleadoActual(datosEmpleado);
@@ -196,12 +234,12 @@ useEffect(() => {
             onChange={(e) => setCargoSeleccionado(e.target.value)}
             className="w-full border border-gray-300 rounded px-3 py-2"
           >
-            <option value="">Seleccione cargo</option>
-            {cargos.map((c) => (
-              <option key={c.IdCargo} value={c.IdCargo}>
-                {c.NombreCargo}
+            <option key="cargo-default" value="">Seleccione cargo</option>
+            {cargos && cargos.length > 0 ? cargos.map((c, index) => (
+              <option key={c.IdCargo || `cargo-${index}`} value={c.IdCargo}>
+                {c.NombreCargo || 'Sin nombre'}
               </option>
-            ))}
+            )) : null}
           </select>
         </div>
 
@@ -211,20 +249,35 @@ useEffect(() => {
           </label>
           <select
             value={tipoSolicitudSeleccionado}
-            onChange={(e) => setTipoSolicitudSeleccionado(e.target.value)}
+            onChange={(e) => {
+              setTipoSolicitudSeleccionado(e.target.value);
+            }}
             className="w-full border border-gray-300 rounded px-3 py-2"
           >
-            <option value="">Seleccione tipo</option>
-            {tiposSolicitud.map((tipo) => (
-              <option key={tipo.id} value={tipo.id}>
-                {tipo.NombreTipo}
+            <option key="tipo-default" value="">Seleccione tipo</option>
+            {tiposSolicitud && tiposSolicitud.length > 0 ? tiposSolicitud.map((tipo, index) => (
+              <option key={tipo.id || `tipo-${index}`} value={tipo.id}>
+                {tipo.NombreTipo || 'Sin nombre'}
               </option>
-            ))}
+            )) : null}
           </select>
+          {/* Mensaje informativo solo para Solicitud nueva */}
+          {(() => {
+            const tipoSeleccionado = tiposSolicitud.find(t => t.id == tipoSolicitudSeleccionado);
+            const nombre = tipoSeleccionado?.NombreTipo?.toLowerCase() || '';
+            if (nombre === 'solicitud nueva') {
+              return (
+                <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  ℹ️ Para "Solicitud nueva" no se requieren observaciones ni evidencias adicionales
+                </div>
+              );
+            }
+            return null;
+          })()}
         </div>
       </div>
 
-      {tipoSolicitudSeleccionado && tipoSolicitudSeleccionado !== "1" && (
+      {documentoEmpleado.length >= 5 && (
         <>
           <div className="mb-4">
             <label className="block font-semibold text-sm mb-1">
@@ -245,25 +298,76 @@ useEffect(() => {
                 <div className="text-sm text-gray-600 mb-2">
                   Se encontraron {historialSolicitudes.length} solicitudes previas:
                 </div>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {historialSolicitudes.map((s) => (
-                    <div key={s.idDetalleSolicitud} className="text-xs bg-white p-2 rounded border">
-                      <div className="font-semibold text-blue-600">
-                        {s.codigoSolicitud}
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {historialSolicitudes.map((s, index) => (
+                    <div key={s.idDetalleSolicitud || `historial-${index}`} className="text-xs bg-white p-3 rounded border shadow-sm">
+                      {/* Encabezado con código y fecha */}
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="font-bold text-blue-600 text-sm">
+                          {s.codigoSolicitud || 'Sin código'}
+                        </div>
+                        <div className="text-gray-500 text-xs">
+                          {s.fechaSolicitud ? new Date(s.fechaSolicitud).toLocaleDateString('es-ES') : 'Sin fecha'}
+                        </div>
                       </div>
-                      <div className="text-gray-700">
-                        {s.nombreEmpleado} - {s.tipoSolicitud}
+                      
+                      {/* Información del empleado y tipo */}
+                      <div className="text-gray-700 mb-2">
+                        <div className="font-semibold">{s.nombreEmpleado || 'Sin nombre'}</div>
+                        <div className="text-gray-600">Tipo: {s.tipoSolicitud || 'Sin tipo'}</div>
                       </div>
-                      <div className="text-gray-500">
-                        {s.NombreEmpresa} - {s.NombreSede}
+                      
+                      {/* Empresa y Sede */}
+                      <div className="text-gray-600 mb-2">
+                        <div>🏢 {s.NombreEmpresa || 'Sin empresa'}</div>
+                        <div>📍 {s.NombreSede || 'Sin sede'}</div>
                       </div>
-                      <div className={`text-xs px-2 py-1 rounded inline-block mt-1 ${
+                      
+                      {/* Elementos solicitados en acordeón */}
+                      <div className="mb-2">
+                        <button
+                          onClick={() => toggleAcordeon(s.idDetalleSolicitud)}
+                          className="flex items-center justify-between w-full text-left font-semibold text-gray-700 mb-1 hover:bg-gray-100 p-1 rounded transition-colors"
+                        >
+                          <span>📦 Elementos ({s.elementos && s.elementos.length > 0 ? s.elementos.length : 0})</span>
+                          <span className={`transform transition-transform ${acordeonesAbiertos.has(s.idDetalleSolicitud) ? 'rotate-180' : ''}`}>
+                            ▼
+                          </span>
+                        </button>
+                        
+                        {acordeonesAbiertos.has(s.idDetalleSolicitud) && (
+                          <div className="bg-gray-50 p-2 rounded border-l-4 border-blue-400">
+                            {s.elementos && s.elementos.length > 0 ? (
+                              <div className="space-y-2">
+                                {s.elementos.map((elemento, elemIndex) => (
+                                  <div key={elemIndex} className="text-xs bg-white p-2 rounded shadow-sm border">
+                                    <div className="font-semibold text-blue-600">
+                                      {elemento.nombreElemento}
+                                    </div>
+                                    <div className="text-gray-600">
+                                      Cantidad: {elemento.cantidad}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-gray-500 text-xs italic">
+                                No hay elementos registrados para esta solicitud
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Estado con color */}
+                      <div className={`text-xs px-2 py-1 rounded inline-block ${
                         s.EstadoSolicitudEmpleado === 'Entregado' ? 'bg-green-100 text-green-800' :
                         s.EstadoSolicitudEmpleado === 'Aprobado' ? 'bg-blue-100 text-blue-800' :
                         s.EstadoSolicitudEmpleado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                        s.EstadoSolicitudEmpleado === 'Aprobado Parcial' ? 'bg-orange-100 text-orange-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {s.EstadoSolicitudEmpleado}
+                        {s.EstadoSolicitudEmpleado || 'Sin estado'}
                       </div>
                     </div>
                   ))}
@@ -276,55 +380,60 @@ useEffect(() => {
             )}
           </div>
 
-          <div className="mb-4">
-            <label className="block font-semibold text-sm mb-1">
-              Observaciones
-            </label>
-            <textarea
-              value={observaciones}
-              onChange={(e) => setObservaciones(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              rows="3"
-              placeholder="Observaciones relevantes..."
-            />
-          </div>
+          {/* Campos adicionales solo para tipos de solicitud que NO sean "Solicitud nueva" */}
+          {debeMostrarCamposAdicionales() && (
+            <>
+              <div className="mb-4">
+                <label className="block font-semibold text-sm mb-1">
+                  Observaciones
+                </label>
+                <textarea
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  rows="3"
+                  placeholder="Observaciones relevantes..."
+                />
+              </div>
 
-          <div className="mb-4">
-            <label className="block font-semibold text-sm mb-1">
-              Evidencias (jpg, png, pdf)
-            </label>
-            <input
-              type="file"
-              multiple
-              onChange={manejarArchivo}
-              accept=".jpg,.jpeg,.png,.pdf"
-              className="block w-full text-sm text-gray-600"
-            />
-            <ul className="mt-2 space-y-1">
-              {evidencias.map((file, idx) => (
-                <li
-                  key={idx}
-                  className="flex justify-between items-center text-sm"
-                >
-                  <span>{file.name}</span>
-                  <div className="space-x-2">
-                    <button
-                      onClick={() => verArchivo(file)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+              <div className="mb-4">
+                <label className="block font-semibold text-sm mb-1">
+                  Evidencias (jpg, png, pdf)
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={manejarArchivo}
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  className="block w-full text-sm text-gray-600"
+                />
+                <ul className="mt-2 space-y-1">
+                  {evidencias.map((file, idx) => (
+                    <li
+                      key={idx}
+                      className="flex justify-between items-center text-sm"
                     >
-                      Ver
-                    </button>
-                    <button
-                      onClick={() => eliminarArchivo(file.name)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+                      <span>{file.name}</span>
+                      <div className="space-x-2">
+                        <button
+                          onClick={() => verArchivo(file)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                        >
+                          Ver
+                        </button>
+                        <button
+                          onClick={() => eliminarArchivo(file.name)}
+                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
         </>
       )}
 
@@ -335,6 +444,7 @@ useEffect(() => {
         >
           ⬅️ Volver
         </button>
+        {/* Elimino el estado del botón */}
         <button
           onClick={continuar}
           disabled={!botonLocalmenteHabilitado}

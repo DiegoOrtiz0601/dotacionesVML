@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { obtenerEmpresasYSedes } from '../../../api/utils'
 import api from '../../../api/axios'
 
@@ -9,6 +9,8 @@ function PasoSeleccionEmpresaSede({ usuario, onContinue }) {
   const [sedeSeleccionada, setSedeSeleccionada] = useState(null)
   const [numeroSolicitud, setNumeroSolicitud] = useState(null)
   const [idSolicitud, setIdSolicitud] = useState(null)
+  const [generandoNumero, setGenerandoNumero] = useState(false)
+  const [cacheNumeros, setCacheNumeros] = useState({})
 
   const empresaId = empresaSeleccionada?.IdEmpresa || ''
   const sedeId = sedeSeleccionada?.IdSede || ''
@@ -31,30 +33,93 @@ function PasoSeleccionEmpresaSede({ usuario, onContinue }) {
     cargarDatos()
   }, [])
 
-  useEffect(() => {
-    const generarNumero = async () => {
-      if (empresaSeleccionada && sedeSeleccionada) {
-        try {
-          const response = await api.get('/generar-numero-solicitud')
-          setNumeroSolicitud(response.data.numeroSolicitud)
-          setIdSolicitud(response.data.idSolicitud)
-        } catch (err) {
-          console.error('⚠️ Error generando número de solicitud:', err)
-          setNumeroSolicitud(null)
-          setIdSolicitud(null)
-        }
-      }
-    }
-
-    generarNumero()
-  }, [empresaSeleccionada, sedeSeleccionada])
-
-  const handleContinuar = () => {
-    if (!empresaSeleccionada || !sedeSeleccionada || !idSolicitud || !numeroSolicitud) {
-      alert('Debes seleccionar empresa y sede, y esperar a que cargue el número de solicitud.')
+  // Función optimizada para generar número con caché y debounce
+  const generarNumeroOptimizado = useCallback(async () => {
+    if (!empresaSeleccionada || !sedeSeleccionada) {
+      setNumeroSolicitud(null)
+      setIdSolicitud(null)
       return
     }
 
+    const cacheKey = `${empresaSeleccionada.IdEmpresa}_${sedeSeleccionada.IdSede}`
+    
+    // Verificar caché
+    if (cacheNumeros[cacheKey]) {
+      console.log('📦 Usando número de solicitud en caché')
+      setNumeroSolicitud(cacheNumeros[cacheKey].numeroSolicitud)
+      setIdSolicitud(cacheNumeros[cacheKey].idSolicitud)
+      return
+    }
+
+    // Evitar múltiples llamadas simultáneas
+    if (generandoNumero) {
+      console.log('⏳ Ya se está generando un número...')
+      return
+    }
+
+    try {
+      setGenerandoNumero(true)
+      console.log('🔄 Generando número de solicitud...')
+      
+      const response = await api.get('/generar-numero-solicitud')
+      
+      const resultado = {
+        numeroSolicitud: response.data.numeroSolicitud,
+        idSolicitud: response.data.idSolicitud
+      }
+      
+      // Guardar en caché
+      setCacheNumeros(prev => ({
+        ...prev,
+        [cacheKey]: resultado
+      }))
+      
+      setNumeroSolicitud(resultado.numeroSolicitud)
+      setIdSolicitud(resultado.idSolicitud)
+      
+      console.log('✅ Número generado y cacheado:', resultado.numeroSolicitud)
+    } catch (err) {
+      console.error('❌ Error generando número de solicitud:', err)
+      setNumeroSolicitud(null)
+      setIdSolicitud(null)
+    } finally {
+      setGenerandoNumero(false)
+    }
+  }, [empresaSeleccionada, sedeSeleccionada, cacheNumeros, generandoNumero])
+
+  // Debounce para evitar múltiples llamadas
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      generarNumeroOptimizado()
+    }, 300) // 300ms de debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [generarNumeroOptimizado])
+
+  const handleContinuar = () => {
+    // Validaciones más estrictas
+    if (!empresaSeleccionada) {
+      alert('⚠️ Debes seleccionar una empresa.')
+      return
+    }
+    
+    if (!sedeSeleccionada) {
+      alert('⚠️ Debes seleccionar una sede.')
+      return
+    }
+    
+    if (!idSolicitud || !numeroSolicitud) {
+      alert('⚠️ Debes esperar a que se genere el número de solicitud.')
+      return
+    }
+
+    if (!usuario || !usuario.idUsuario) {
+      alert('⚠️ Error: No se pudo obtener la información del usuario.')
+      return
+    }
+
+    console.log('✅ Validaciones del paso 1 superadas, continuando...');
+    
     onContinue({
       idSolicitud,
       numeroSolicitud,
@@ -110,15 +175,37 @@ function PasoSeleccionEmpresaSede({ usuario, onContinue }) {
 
       {/* Info + botón */}
       <div className="col-span-2 mt-6 flex justify-between items-center">
-        <p className="text-sm italic text-gray-500">
-          {numeroSolicitud ? `Número generado: ${numeroSolicitud}` : 'Generando número...'}
-        </p>
+        <div className="flex items-center space-x-2">
+          {generandoNumero ? (
+            <>
+              <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <p className="text-sm text-blue-600">Generando número...</p>
+            </>
+          ) : numeroSolicitud ? (
+            <div className="text-sm text-green-600 font-medium">
+              <p>✅ Número generado: <span className="font-bold">{numeroSolicitud}</span></p>
+              <p className="text-xs text-gray-600">Empresa: {empresaSeleccionada?.NombreEmpresa} | Sede: {sedeSeleccionada?.NombreSede}</p>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">
+              <p className="italic">Selecciona empresa y sede para generar el número</p>
+              <div className="text-xs mt-1">
+                <span className={`inline-block w-2 h-2 rounded-full mr-1 ${empresaSeleccionada ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                Empresa seleccionada
+                <span className={`inline-block w-2 h-2 rounded-full ml-2 mr-1 ${sedeSeleccionada ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                Sede seleccionada
+              </div>
+            </div>
+          )}
+        </div>
         <button
-          className={`bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-lg transition ${
-            !numeroSolicitud ? 'opacity-50 cursor-not-allowed' : ''
+          className={`font-medium px-5 py-2 rounded-lg transition ${
+            !numeroSolicitud || generandoNumero || !empresaSeleccionada || !sedeSeleccionada
+              ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}
           onClick={handleContinuar}
-          disabled={!numeroSolicitud}
+          disabled={!numeroSolicitud || generandoNumero || !empresaSeleccionada || !sedeSeleccionada}
         >
           Siguiente ➡️
         </button>

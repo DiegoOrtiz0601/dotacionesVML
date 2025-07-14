@@ -81,6 +81,14 @@ const WizardSolicitudDotacion = () => {
   const enviarSolicitudFinal = async () => {
     setCargando(true);
     try {
+      console.log('🚀 Iniciando proceso de guardado optimizado...');
+      
+      // Validaciones previas
+      if (!resumenSolicitud || resumenSolicitud.length === 0) {
+        throw new Error('No hay empleados para procesar');
+      }
+
+      // 1. Crear la solicitud principal
       const response = await api.post("/solicitudes", {
         idUsuario: usuario.idUsuario,
         idEmpresa: empresa.IdEmpresa,
@@ -95,7 +103,11 @@ const WizardSolicitudDotacion = () => {
       setIdSolicitud(idSol);
       setNumeroSolicitud(numeroSol);
 
-      for (const emp of resumenSolicitud) {
+      console.log('✅ Solicitud principal creada:', numeroSol);
+
+      // 2. Procesar empleados en paralelo para mejor rendimiento
+      const promesasEmpleados = resumenSolicitud.map(async (emp) => {
+        // Crear detalle del empleado
         const responseDetalle = await api.post("/detalle-solicitud-empleado", {
           idSolicitud: idSol,
           nombreEmpleado: emp.nombresEmpleado,
@@ -109,6 +121,7 @@ const WizardSolicitudDotacion = () => {
         const idDetalleSolicitud = responseDetalle.data.idDetalleSolicitud;
         emp.idDetalleSolicitud = idDetalleSolicitud;
 
+        // Procesar elementos en batch
         if (Array.isArray(emp.elementos) && emp.elementos.length > 0) {
           const peticionesElementos = emp.elementos.map((elemento) =>
             api.post("/detalle-solicitud-elemento", {
@@ -121,26 +134,35 @@ const WizardSolicitudDotacion = () => {
           await Promise.all(peticionesElementos);
         }
 
+        // Procesar evidencias en batch (solo si no es solicitud nueva)
         if (
           emp.evidencias &&
           emp.evidencias.length > 0 &&
           emp.IdTipoSolicitud !== 1
         ) {
-          for (const evidencia of emp.evidencias) {
+          const promesasEvidencias = emp.evidencias.map(async (evidencia) => {
             const formData = new FormData();
             formData.append("idSolicitud", idSol);
             formData.append("documentoEmpleado", emp.documentoEmpleado);
             formData.append("nombreEmpresa", empresa.NombreEmpresa);
             formData.append("archivo", evidencia);
 
-            await api.post("/guardar-evidencia", formData, {
+            return api.post("/guardar-evidencia", formData, {
               headers: { "Content-Type": "multipart/form-data" },
             });
-          }
+          });
+          
+          await Promise.all(promesasEvidencias);
         }
-      }
 
-      return numeroSol
+        return emp;
+      });
+
+      // Ejecutar todas las promesas de empleados en paralelo
+      await Promise.all(promesasEmpleados);
+
+      console.log('✅ Proceso de guardado completado exitosamente');
+      return numeroSol;
 
     } catch (error) {
       console.error(
@@ -148,8 +170,9 @@ const WizardSolicitudDotacion = () => {
         error.response?.data || error
       );
       alert(
-        `❌ Error:\n${JSON.stringify(error.response?.data?.errors, null, 2)}`
+        `❌ Error al guardar la solicitud:\n${error.message || JSON.stringify(error.response?.data?.errors, null, 2)}`
       );
+      throw error; // Re-lanzar para que el componente maneje el error
     } finally {
       setResumenSolicitud([]);
       setEmpleadoActual(null);

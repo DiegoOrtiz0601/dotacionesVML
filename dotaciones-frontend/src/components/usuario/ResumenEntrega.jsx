@@ -31,7 +31,13 @@ const ResumenEntrega = ({
   const [cargandoPDF, setCargandoPDF] = useState(false);
   const [modalPDF, setModalPDF] = useState(null);
   const [modoFirma, setModoFirma] = useState("canvas");
-  const [webSignerDisponible, setWebSignerDisponible] = useState(null);
+  const [epadStatus, setEpadStatus] = useState({
+    extensionInstalled: false,
+    serviceAvailable: false,
+    deviceConnected: false,
+    lastCheck: null,
+    isChecking: false
+  });
 
   useEffect(() => {
     const handler = (event) => {
@@ -77,21 +83,154 @@ const ResumenEntrega = ({
       document.removeEventListener("SigCaptureWeb_SignResponse", handler);
   }, []);
 
+  // Verificación inicial al cargar el componente
   useEffect(() => {
-    const verificarExtension = () => {
-      const installed = document.documentElement.getAttribute(
-        "SigCaptureWebExtension-installed"
-      );
-      setWebSignerDisponible(!!installed);
-      if (!installed) {
-        console.warn(
-          "❌ ePadLink Extension no está instalada o está deshabilitada."
-        );
-      }
+    const initialCheck = setTimeout(() => {
+      verificarEstadoEPad();
+    }, 1000);
+    
+    return () => clearTimeout(initialCheck);
+  }, []);
+
+  // Función para verificar el estado completo del ePad
+  const verificarEstadoEPad = async () => {
+    if (epadStatus.isChecking) return; // Evitar verificaciones simultáneas
+    
+    setEpadStatus(prev => ({ ...prev, isChecking: true }));
+    
+    const newStatus = {
+      extensionInstalled: false,
+      serviceAvailable: false,
+      deviceConnected: false,
+      lastCheck: new Date(),
+      isChecking: false
     };
 
-    setTimeout(verificarExtension, 1000);
-  }, []);
+    try {
+      console.log("🔍 Iniciando verificación del ePad...");
+      
+      // 1. Verificar si la extensión está instalada
+      const extensionInstalled = !!document.documentElement.getAttribute("SigCaptureWebExtension-installed");
+      newStatus.extensionInstalled = extensionInstalled;
+      console.log("📦 Extensión instalada:", extensionInstalled);
+
+      if (!extensionInstalled) {
+        console.warn("❌ Extensión WebSigner no está instalada");
+        setEpadStatus(newStatus);
+        return;
+      }
+
+      // 2. Verificar si el servicio está disponible
+      try {
+        const serviceResponse = await fetch('http://localhost:8000/epad.js', {
+          method: 'HEAD',
+          mode: 'no-cors'
+        });
+        newStatus.serviceAvailable = true;
+        console.log("✅ Servicio ePad disponible");
+      } catch (error) {
+        console.warn("❌ Servicio ePad no disponible:", error);
+        newStatus.serviceAvailable = false;
+      }
+
+      // 3. Verificar si el dispositivo está conectado
+      if (newStatus.serviceAvailable) {
+        try {
+          // Verificación simple pero efectiva: verificar si la extensión responde
+          const extensionInstalled = document.documentElement.getAttribute("SigCaptureWebExtension-installed");
+          
+          if (extensionInstalled === "true") {
+            // Verificar si podemos crear elementos del ePad
+            try {
+              const testElem = document.createElement("SigCaptureWeb_ExtnDataElem");
+              testElem.setAttribute("SigCaptureWeb_MsgAttribute", JSON.stringify({
+                test: true,
+                firstName: "Test",
+                lastName: "User"
+              }));
+              
+              // Verificar si el elemento se creó correctamente
+              if (testElem && testElem.getAttribute("SigCaptureWeb_MsgAttribute")) {
+                // Verificación adicional: intentar acceder a propiedades específicas del ePad
+                const hasEpadSupport = typeof window.SigCaptureWeb !== 'undefined' || 
+                                     document.documentElement.hasAttribute("SigCaptureWebExtension-installed");
+                
+                if (hasEpadSupport) {
+                  newStatus.deviceConnected = true;
+                  console.log("✅ Dispositivo ePad conectado y respondiendo");
+                } else {
+                  newStatus.deviceConnected = false;
+                  console.warn("❌ ePad no tiene soporte completo");
+                }
+              } else {
+                newStatus.deviceConnected = false;
+                console.warn("❌ No se pudo crear elemento de prueba");
+              }
+              
+              // Limpiar elemento de prueba
+              if (testElem.parentNode) {
+                testElem.parentNode.removeChild(testElem);
+              }
+            } catch (elemError) {
+              console.warn("❌ Error creando elemento de prueba:", elemError);
+              newStatus.deviceConnected = false;
+            }
+          } else {
+            newStatus.deviceConnected = false;
+            console.warn("❌ Extensión no está activa");
+          }
+        } catch (error) {
+          console.warn("❌ Error verificando dispositivo:", error);
+          newStatus.deviceConnected = false;
+        }
+      }
+
+    } catch (error) {
+      console.error("❌ Error verificando estado del ePad:", error);
+    }
+
+    // Detectar cambios de estado
+    const wasConnected = epadStatus.extensionInstalled && epadStatus.serviceAvailable && epadStatus.deviceConnected;
+    const isConnected = newStatus.extensionInstalled && newStatus.serviceAvailable && newStatus.deviceConnected;
+
+    if (wasConnected && !isConnected) {
+      console.warn("❌ ePad desconectado");
+      showToast("⚠️ ePad desconectado", "yellow");
+    } else if (!wasConnected && isConnected) {
+      console.log("✅ ePad conectado");
+      showToast("✅ ePad conectado", "green");
+    }
+
+    console.log("📊 Estado final del ePad:", {
+      extension: newStatus.extensionInstalled,
+      service: newStatus.serviceAvailable,
+      device: newStatus.deviceConnected,
+      connected: isConnected
+    });
+
+    setEpadStatus(newStatus);
+  };
+
+  // Función para verificación manual
+  const verificarManualmente = async () => {
+    console.log("🔄 Verificación manual iniciada...");
+    await verificarEstadoEPad();
+    
+    // Esperar un momento para que se actualice el estado
+    setTimeout(() => {
+      const isConnected = epadStatus.extensionInstalled && epadStatus.serviceAvailable && epadStatus.deviceConnected;
+      
+      if (isConnected) {
+        showToast("✅ ePad verificado - Conectado y funcionando", "green");
+      } else if (epadStatus.extensionInstalled && epadStatus.serviceAvailable && !epadStatus.deviceConnected) {
+        showToast("⚠️ ePad verificado - Servicio disponible pero dispositivo desconectado", "yellow");
+      } else if (epadStatus.extensionInstalled && !epadStatus.serviceAvailable) {
+        showToast("⚠️ ePad verificado - Extensión instalada pero servicio no disponible", "yellow");
+      } else {
+        showToast("❌ ePad verificado - Extensión no instalada", "red");
+      }
+    }, 500);
+  };
 
   const toggleEmpleado = (index) => {
     setDesplegado((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -237,17 +376,103 @@ const ResumenEntrega = ({
   return (
     <div className="mt-8 p-6 bg-white border rounded shadow text-justify text-sm leading-[1.15]">
       <Encabezado logo={logo} empresa={empresa} sede={sede} />
+      
+      {/* Indicador de estado del ePad en tiempo real */}
+      <div className="mb-4 flex items-center justify-between p-3 bg-gray-50 border rounded">
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${
+            epadStatus.extensionInstalled && epadStatus.serviceAvailable && epadStatus.deviceConnected ? 'bg-green-500 animate-pulse' :
+            epadStatus.extensionInstalled && epadStatus.serviceAvailable && !epadStatus.deviceConnected ? 'bg-yellow-500 animate-pulse' :
+            epadStatus.extensionInstalled && !epadStatus.serviceAvailable ? 'bg-red-500' :
+            epadStatus.extensionInstalled ? 'bg-blue-500 animate-pulse' :
+            'bg-gray-500'
+          }`}></div>
+          <span className="text-sm font-medium">
+            Estado del ePad: {
+              epadStatus.isChecking ? 'Verificando...' :
+              epadStatus.extensionInstalled && epadStatus.serviceAvailable && epadStatus.deviceConnected ? 'Conectado' :
+              epadStatus.extensionInstalled && epadStatus.serviceAvailable && !epadStatus.deviceConnected ? 'Desconectado' :
+              epadStatus.extensionInstalled && !epadStatus.serviceAvailable ? 'Servicio no disponible' :
+              epadStatus.extensionInstalled ? 'Verificando...' :
+              'Extensión no instalada'
+            }
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {epadStatus.lastCheck && (
+            <span className="text-xs text-gray-500">
+              Última verificación: {epadStatus.lastCheck.toLocaleTimeString()}
+            </span>
+          )}
+          <button
+            onClick={verificarManualmente}
+            className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
+          >
+            🔄 Verificar
+          </button>
+        </div>
+      </div>
 
-      {webSignerDisponible === false && (
-        <div className="mb-4 p-4 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded">
-          ⚠️ WebSigner no está disponible. Verifica que el servicio esté
-          corriendo en <code>http://localhost:8000/epad.js</code>.
+      {/* Estado: Extensión no instalada */}
+      {!epadStatus.extensionInstalled && (
+        <div className="mb-4 p-4 bg-red-100 text-red-800 border border-red-300 rounded">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">❌</span>
+            <div>
+              <strong>Extensión WebSigner no instalada</strong>
+              <p className="text-sm mt-1">
+                La extensión del navegador no está instalada o está deshabilitada.
+                Instala la extensión WebSigner para usar el ePad.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
-      {webSignerDisponible === true && (
+      {/* Estado: Extensión instalada pero servicio no disponible */}
+      {epadStatus.extensionInstalled && !epadStatus.serviceAvailable && (
+        <div className="mb-4 p-4 bg-yellow-100 text-yellow-800 border border-yellow-300 rounded">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⚠️</span>
+            <div>
+              <strong>Servicio ePad no disponible</strong>
+              <p className="text-sm mt-1">
+                La extensión está instalada, pero el servicio de ePad en http://localhost:8000/epad.js no está corriendo.
+                Verifica que el servidor esté iniciado y accesible.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Estado: Servicio disponible pero dispositivo no conectado */}
+      {epadStatus.extensionInstalled && epadStatus.serviceAvailable && !epadStatus.deviceConnected && (
+        <div className="mb-4 p-4 bg-orange-100 text-orange-800 border border-orange-300 rounded">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🔌</span>
+            <div>
+              <strong>ePad desconectado</strong>
+                              <p className="text-sm mt-1">
+                  El servicio está corriendo, pero el ePad no está conectado físicamente o no responde.
+                  Verifica la conexión USB y el estado del dispositivo.
+                </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Estado: Todo conectado y funcionando */}
+      {epadStatus.extensionInstalled && epadStatus.serviceAvailable && epadStatus.deviceConnected && (
         <div className="mb-4 p-4 bg-green-100 text-green-800 border border-green-300 rounded">
-          ✅ WebSigner está activo y listo para capturar firmas.
+          <div className="flex items-center gap-2">
+            <span className="text-lg">✅</span>
+            <div>
+              <strong>ePad conectado y funcionando</strong>
+              <p className="text-sm mt-1">
+                WebSigner está activo y listo para capturar firmas.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

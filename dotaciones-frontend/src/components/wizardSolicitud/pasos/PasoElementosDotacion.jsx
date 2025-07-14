@@ -14,16 +14,24 @@ const PasoElementosDotacion = ({
   const [elementos, setElementos] = useState([]);
   const [seleccionados, setSeleccionados] = useState({});
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  const [cargando, setCargando] = useState(false);
 
   useEffect(() => {
     const cargarElementos = async () => {
       try {
+        setCargando(true);
+        console.log('🔄 Cargando elementos de dotación...', { idEmpresa, idCargo });
+        
         const response = await api.get("/elementos-dotacion", {
           params: { idEmpresa, idCargo },
         });
+        
+        console.log('✅ Elementos cargados:', response.data.length, 'elementos');
         setElementos(response.data);
       } catch (error) {
         console.error("❌ Error cargando elementos:", error);
+      } finally {
+        setCargando(false);
       }
     };
     if (idEmpresa && idCargo) {
@@ -127,7 +135,17 @@ const PasoElementosDotacion = ({
     <div>
       <h3 className="text-lg font-bold mb-4">Agregar Elementos de Dotación</h3>
 
-      {elementos.map((el) => {
+      {cargando ? (
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-gray-600">Cargando elementos de dotación...</p>
+        </div>
+      ) : elementos.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <p>No se encontraron elementos de dotación para esta empresa y cargo.</p>
+        </div>
+      ) : (
+        elementos.map((el) => {
         const tallas = el.tallas?.split(",") || [];
 
         return (
@@ -182,7 +200,8 @@ const PasoElementosDotacion = ({
             )}
           </div>
         );
-      })}
+      })
+      )}
 
       {seleccionValida && (
         <div className="mt-6 border border-green-300 bg-green-50 rounded p-4 shadow-sm">

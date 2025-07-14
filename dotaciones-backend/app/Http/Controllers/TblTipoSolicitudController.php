@@ -10,7 +10,12 @@ class TblTipoSolicitudController extends Controller
 {
     public function index()
     {
-        return response()->json(TblTipoSolicitud::all());
+        $tipos = DB::table('tbl_tipo_solicitud')
+            ->select('IdTipoSolicitud as id', 'NombreTipo')
+            ->orderBy('IdTipoSolicitud')
+            ->get();
+
+        return response()->json($tipos);
     }
 
     public function store(Request $request)

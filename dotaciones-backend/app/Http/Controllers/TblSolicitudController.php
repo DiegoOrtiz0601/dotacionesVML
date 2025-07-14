@@ -250,14 +250,37 @@ class TblSolicitudController extends Controller
     // Genera un número/código visual para nueva solicitud
     public function generarNumeroSolicitud()
     {
-        $ultimoId = DB::table('tbl_solicitudes')->max('id');
-        $nuevoId = is_null($ultimoId) ? 1 : $ultimoId + 1;
-        $codigo = 'DOT-' . str_pad($nuevoId, 4, '0', STR_PAD_LEFT);
+        $startTime = microtime(true);
+        
+        Log::info('🚀 Generando número de solicitud');
+        
+        try {
+            $ultimoId = DB::table('tbl_solicitudes')->max('id');
+            $nuevoId = is_null($ultimoId) ? 1 : $ultimoId + 1;
+            $codigo = 'DOT-' . str_pad($nuevoId, 4, '0', STR_PAD_LEFT);
 
-        return response()->json([
-            'numeroSolicitud' => $codigo,
-            'idSolicitud'     => $nuevoId
-        ]);
+            $endTime = microtime(true);
+            $executionTime = round(($endTime - $startTime) * 1000, 2);
+            
+            Log::info('✅ Número de solicitud generado', [
+                'numero' => $codigo,
+                'id' => $nuevoId,
+                'tiempo_ms' => $executionTime
+            ]);
+
+            return response()->json([
+                'numeroSolicitud' => $codigo,
+                'idSolicitud'     => $nuevoId
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ Error generando número de solicitud', [
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'error' => 'Error generando número de solicitud'
+            ], 500);
+        }
     }
 
     // Retorna solicitudes para Talento Humano con filtros
@@ -478,5 +501,134 @@ class TblSolicitudController extends Controller
         return response()->json(['message' => 'Error al rechazar solicitud'], 500);
     }
 }
+
+    // Procesar solicitud completa en batch (optimizado)
+    public function procesarSolicitudCompleta(Request $request)
+    {
+        $startTime = microtime(true);
+        
+        Log::info('🚀 Iniciando procesamiento de solicitud completa en batch');
+        
+        $validated = Validator::make($request->all(), [
+            'idUsuario' => 'required|integer|exists:tbl_usuarios_sistema,idUsuario',
+            'idEmpresa' => 'required|integer|exists:tbl_empresa,IdEmpresa',
+            'idSede' => 'required|integer|exists:tbl_sedes,IdSede',
+            'empleados' => 'required|array|min:1',
+            'empleados.*.nombresEmpleado' => 'required|string|max:255',
+            'empleados.*.documentoEmpleado' => 'required|string|max:50',
+            'empleados.*.idCargo' => 'required|integer|exists:tbl_cargo,IdCargo',
+            'empleados.*.IdTipoSolicitud' => 'required|integer|exists:tbl_tipo_solicitud,IdTipoSolicitud',
+            'empleados.*.observaciones' => 'nullable|string',
+            'empleados.*.elementos' => 'required|array|min:1',
+            'empleados.*.elementos.*.idElemento' => 'required|integer|exists:tbl_elementos,idElemento',
+            'empleados.*.elementos.*.talla' => 'required|string|max:50',
+            'empleados.*.elementos.*.cantidad' => 'required|integer|min:1',
+        ]);
+
+        if ($validated->fails()) {
+            Log::error('❌ Validación fallida en procesarSolicitudCompleta', [
+                'errores' => $validated->errors()
+            ]);
+            return response()->json(['errors' => $validated->errors()], 422);
+        }
+
+        DB::beginTransaction();
+        
+        try {
+            // 1. Crear solicitud principal
+            $solicitud = new TblSolicitud();
+            $solicitud->idUsuario = $request->idUsuario;
+            $solicitud->idEmpresa = $request->idEmpresa;
+            $solicitud->idSede = $request->idSede;
+            $solicitud->fechaSolicitud = now();
+            $solicitud->estadoSolicitud = 'En revisión';
+            $solicitud->save();
+
+            // Generar código único
+            $solicitud->codigoSolicitud = 'DOT-' . str_pad($solicitud->id, 4, '0', STR_PAD_LEFT);
+            $solicitud->save();
+
+            Log::info('✅ Solicitud principal creada', [
+                'idSolicitud' => $solicitud->id,
+                'codigoSolicitud' => $solicitud->codigoSolicitud
+            ]);
+
+            // 2. Procesar empleados y elementos en batch
+            $empleadosData = [];
+            $elementosData = [];
+
+            foreach ($request->empleados as $empleado) {
+                // Insertar empleado
+                $idDetalleSolicitud = DB::table('tbl_detalle_solicitud_empleado')->insertGetId([
+                    'idSolicitud' => $solicitud->id,
+                    'documentoEmpleado' => $empleado['documentoEmpleado'],
+                    'nombreEmpleado' => $empleado['nombresEmpleado'],
+                    'idCargo' => $empleado['idCargo'],
+                    'idTipoSolicitud' => $empleado['IdTipoSolicitud'],
+                    'observaciones' => $empleado['observaciones'] ?? '',
+                    'EstadoSolicitudEmpleado' => 'Pendiente',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $empleadosData[] = [
+                    'idDetalleSolicitud' => $idDetalleSolicitud,
+                    'empleado' => $empleado
+                ];
+
+                // Preparar elementos para inserción en batch
+                foreach ($empleado['elementos'] as $elemento) {
+                    $elementosData[] = [
+                        'idDetalleSolicitud' => $idDetalleSolicitud,
+                        'idElemento' => $elemento['idElemento'],
+                        'TallaElemento' => $elemento['talla'],
+                        'Cantidad' => $elemento['cantidad'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+            }
+
+            // 3. Insertar elementos en batch
+            if (!empty($elementosData)) {
+                DB::table('tbl_detalle_solicitud_elemento')->insert($elementosData);
+                Log::info('✅ Elementos insertados en batch', ['cantidad' => count($elementosData)]);
+            }
+
+            DB::commit();
+
+            $endTime = microtime(true);
+            $executionTime = round(($endTime - $startTime) * 1000, 2);
+
+            Log::info('✅ Solicitud completa procesada exitosamente', [
+                'idSolicitud' => $solicitud->id,
+                'codigoSolicitud' => $solicitud->codigoSolicitud,
+                'empleados' => count($empleadosData),
+                'elementos' => count($elementosData),
+                'tiempo_ms' => $executionTime
+            ]);
+
+            return response()->json([
+                'idSolicitud' => $solicitud->id,
+                'codigoSolicitud' => $solicitud->codigoSolicitud,
+                'empleados' => count($empleadosData),
+                'elementos' => count($elementosData),
+                'tiempo_ms' => $executionTime
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error('❌ Error procesando solicitud completa', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'message' => 'Error interno del servidor al procesar la solicitud.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
 }

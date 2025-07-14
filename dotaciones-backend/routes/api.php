@@ -71,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // 🧾 Solicitudes principales (eliminada duplicación)
     Route::apiResource('solicitudes', TblSolicitudController::class);
     Route::get('/generar-numero-solicitud', [TblSolicitudController::class, 'generarNumeroSolicitud']);
+    Route::post('/procesar-solicitud-completa', [TblSolicitudController::class, 'procesarSolicitudCompleta']);
     
     // Rutas específicas de solicitudes
     Route::get('/solicitudes-gestion', [TblSolicitudController::class, 'indexGestionar']);

@@ -55,7 +55,13 @@ function ResumenSolicitud({
         <div>
           <h4 className="text-md font-semibold mb-2 text-primario">👤 Empleados incluidos:</h4>
 
-          {resumenSolicitud.map((emp, idx) => (
+          {resumenSolicitud.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p className="text-lg mb-2">📝 No hay empleados agregados</p>
+              <p className="text-sm">Completa los pasos del wizard para agregar empleados a la solicitud</p>
+            </div>
+          ) : (
+            resumenSolicitud.map((emp, idx) => (
             <div key={idx} className="border-t pt-4 mt-4">
               <div className="flex justify-between items-center">
                 <div>
@@ -122,12 +128,29 @@ function ResumenSolicitud({
                 )}
               </details>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
         <div className="flex justify-end mt-6">
           <button
             onClick={async () => {
+              // Validar que haya empleados antes de enviar
+              if (!resumenSolicitud || resumenSolicitud.length === 0) {
+                alert('⚠️ Debes agregar al menos un empleado antes de enviar la solicitud.')
+                return
+              }
+
+              // Validar que cada empleado tenga elementos
+              const empleadosSinElementos = resumenSolicitud.filter(emp => 
+                !emp.elementos || emp.elementos.length === 0
+              )
+              
+              if (empleadosSinElementos.length > 0) {
+                alert('⚠️ Todos los empleados deben tener elementos de dotación asignados.')
+                return
+              }
+
               if (process.env.NODE_ENV === 'development') {
                 console.log('🟢 Botón Enviar presionado')
               }
@@ -135,7 +158,12 @@ function ResumenSolicitud({
               setNumeroConfirmada(numero)
               setModalExito(true)
             }}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded text-sm shadow"
+            disabled={!resumenSolicitud || resumenSolicitud.length === 0}
+            className={`px-6 py-2 rounded text-sm shadow ${
+              resumenSolicitud && resumenSolicitud.length > 0
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+            }`}
           >
             ✅ Enviar Solicitud Final
           </button>
