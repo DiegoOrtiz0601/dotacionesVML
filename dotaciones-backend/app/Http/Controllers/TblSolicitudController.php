@@ -89,7 +89,7 @@ class TblSolicitudController extends Controller
                 return response()->json(['message' => 'Solicitud no encontrada'], 404);
             }
 
-            // 2. Empleados
+            // 2. Empleados con tipo de solicitud
             $empleadosRaw = DB::table('tbl_detalle_solicitud_empleado as de')
                 ->leftJoin('tbl_tipo_solicitud as ts', 'ts.idTipoSolicitud', '=', 'de.idTipoSolicitud')
                 ->where('de.idSolicitud', $id)
@@ -105,7 +105,7 @@ class TblSolicitudController extends Controller
 
             $documentos = $empleadosRaw->pluck('documentoEmpleado');
 
-            // 3. Elementos por documento
+            // 3. Elementos por documento (optimizado)
             $elementosRaw = DB::table('tbl_detalle_solicitud_elemento as d')
                 ->join('tbl_elementos as el', 'el.idElemento', '=', 'd.idElemento')
                 ->join('tbl_detalle_solicitud_empleado as de', 'de.idDetalleSolicitud', '=', 'd.idDetalleSolicitud')
@@ -120,7 +120,7 @@ class TblSolicitudController extends Controller
                 ->get()
                 ->groupBy('documentoEmpleado');
 
-            // 4. Evidencias por documento
+            // 4. Evidencias por documento (solo si es necesario)
             $requiereEvidencias = $empleadosRaw->contains(fn($emp) => strtolower($emp->tipoSolicitud ?? '') !== 'solicitud nueva');
             $evidenciasPorDocumento = collect();
 
@@ -141,48 +141,58 @@ class TblSolicitudController extends Controller
                 })->groupBy('documentoEmpleado');
             }
 
-            // 5. Historial por documentoEmpleado
-            $historialPorDocumento = [];
+            // 5. Historial optimizado - una sola consulta para todos los documentos
+            $historialCompleto = DB::table('tbl_detalle_solicitud_empleado as d')
+                ->join('tbl_solicitudes as s', 's.id', '=', 'd.idSolicitud')
+                ->whereIn('d.documentoEmpleado', $documentos)
+                ->where('d.idSolicitud', '!=', $id)
+                ->select(
+                    'd.idSolicitud',
+                    'd.documentoEmpleado',
+                    's.codigoSolicitud',
+                    'd.created_at as fecha',
+                    DB::raw("CONCAT('Estado: ', s.estadoSolicitud,
+                    CASE WHEN d.observaciones IS NOT NULL AND d.observaciones != ''
+                         THEN CONCAT(' | Obs: ', d.observaciones) ELSE '' END) as evento")
+                )
+                ->orderBy('d.created_at')
+                ->get()
+                ->groupBy('documentoEmpleado');
 
-            foreach ($documentos as $documentoEmpleado) {
-                $historialEmpleado = DB::table('tbl_detalle_solicitud_empleado as d')
-                    ->join('tbl_solicitudes as s', 's.id', '=', 'd.idSolicitud')
-                    ->where('d.documentoEmpleado', $documentoEmpleado)
-                    ->where('d.idSolicitud', '!=', $id)
+            // 6. Elementos del historial optimizado - una sola consulta
+            $solicitudesHistorial = $historialCompleto->flatten(1)->pluck('idSolicitud')->unique();
+            $elementosHistorial = collect();
+            
+            if ($solicitudesHistorial->isNotEmpty()) {
+                $elementosHistorial = DB::table('tbl_detalle_solicitud_elemento as dse')
+                    ->join('tbl_elementos as el', 'el.idElemento', '=', 'dse.idElemento')
+                    ->join('tbl_detalle_solicitud_empleado as de', 'de.idDetalleSolicitud', '=', 'dse.idDetalleSolicitud')
+                    ->whereIn('de.idSolicitud', $solicitudesHistorial)
+                    ->whereIn('de.documentoEmpleado', $documentos)
                     ->select(
-                        'd.idSolicitud',
-                        'd.documentoEmpleado',
-                        's.codigoSolicitud',
-                        'd.created_at as fecha',
-                        DB::raw("CONCAT('Estado: ', s.estadoSolicitud,
-                        CASE WHEN d.observaciones IS NOT NULL AND d.observaciones != ''
-                             THEN CONCAT(' | Obs: ', d.observaciones) ELSE '' END) as evento")
+                        'de.idSolicitud',
+                        'de.documentoEmpleado',
+                        'el.nombreElemento',
+                        'dse.TallaElemento as talla',
+                        'dse.cantidad'
                     )
-                    ->orderBy('d.created_at')
                     ->get()
-                    ->map(function ($item) {
-                        $item->elementos = DB::table('tbl_detalle_solicitud_elemento as dse')
-                            ->join('tbl_elementos as el', 'el.idElemento', '=', 'dse.idElemento')
-                            ->join('tbl_detalle_solicitud_empleado as de', 'de.idDetalleSolicitud', '=', 'dse.idDetalleSolicitud')
-                            ->where('de.idSolicitud', $item->idSolicitud)
-                            ->where('de.documentoEmpleado', $item->documentoEmpleado)
-                            ->select('el.nombreElemento', 'dse.TallaElemento as talla', 'dse.cantidad')
-                            ->get();
-                        return $item;
+                    ->groupBy(function ($item) {
+                        return $item->idSolicitud . '_' . $item->documentoEmpleado;
                     });
-
-                $historialPorDocumento[$documentoEmpleado] = $historialEmpleado->isEmpty()
-                    ? [[
-                        'fecha' => now()->format('Y-m-d H:i'),
-                        'evento' => 'No hay solicitudes antiguas para este empleado.',
-                        'codigoSolicitud' => null,
-                        'elementos' => []
-                    ]]
-                    : $historialEmpleado;
             }
 
-            // 6. Mapear empleados con historial, elementos, evidencias
-            $empleados = $empleadosRaw->map(function ($emp) use ($elementosRaw, $evidenciasPorDocumento, $historialPorDocumento) {
+            // 7. Mapear empleados con historial, elementos, evidencias
+            $empleados = $empleadosRaw->map(function ($emp) use ($elementosRaw, $evidenciasPorDocumento, $historialCompleto, $elementosHistorial) {
+                $historialEmpleado = $historialCompleto[$emp->documentoEmpleado] ?? collect();
+                
+                // Agregar elementos al historial
+                $historialConElementos = $historialEmpleado->map(function ($item) use ($elementosHistorial) {
+                    $key = $item->idSolicitud . '_' . $item->documentoEmpleado;
+                    $item->elementos = $elementosHistorial[$key] ?? collect();
+                    return $item;
+                });
+
                 return [
                     'nombreEmpleado' => $emp->nombreEmpleado,
                     'documentoEmpleado' => $emp->documentoEmpleado,
@@ -198,7 +208,14 @@ class TblSolicitudController extends Controller
                             'cantidadSolicitada' => $el->cantidadSolicitada
                         ];
                     })->values(),
-                    'historial' => $historialPorDocumento[$emp->documentoEmpleado] ?? []
+                    'historial' => $historialConElementos->isEmpty()
+                        ? [[
+                            'fecha' => now()->format('Y-m-d H:i'),
+                            'evento' => 'No hay solicitudes antiguas para este empleado.',
+                            'codigoSolicitud' => null,
+                            'elementos' => []
+                        ]]
+                        : $historialConElementos->values()
                 ];
             });
 

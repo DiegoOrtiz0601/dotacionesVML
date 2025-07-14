@@ -16,18 +16,28 @@ class TblElementosDotacionController extends Controller
             return response()->json(['message' => 'Faltan parámetros requeridos'], 400);
         }
 
-       $elementos = DB::table('tbl_elementos')
-    ->where('IdEmpresa', $idEmpresa)
-    ->where('IdCargo', $idCargo)
-    ->where('estadoElemento', 1)
-    ->select(
-        DB::raw('MIN(idElemento) as idElemento'),
-        'nombreElemento',
-        DB::raw('STRING_AGG(talla, \', \') AS tallas')
-    )
-    ->groupBy('nombreElemento')
-    ->get();
-
+        // Consulta optimizada con índices
+        $elementos = DB::table('tbl_elementos')
+            ->where('IdEmpresa', $idEmpresa)
+            ->where('IdCargo', $idCargo)
+            ->where('estadoElemento', 1)
+            ->select(
+                'idElemento',
+                'nombreElemento',
+                'talla'
+            )
+            ->orderBy('nombreElemento')
+            ->orderBy('talla')
+            ->get()
+            ->groupBy('nombreElemento')
+            ->map(function ($items) {
+                return [
+                    'idElemento' => $items->first()->idElemento,
+                    'nombreElemento' => $items->first()->nombreElemento,
+                    'tallas' => $items->pluck('talla')->implode(', ')
+                ];
+            })
+            ->values();
 
         return response()->json($elementos);
     }

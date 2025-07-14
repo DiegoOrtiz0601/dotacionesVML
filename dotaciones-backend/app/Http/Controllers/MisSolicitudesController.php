@@ -75,6 +75,7 @@ class MisSolicitudesController extends Controller
             return response()->json(['error' => 'Solicitud no encontrada'], 404);
         }
 
+        // Obtener empleados con cargo en una sola consulta
         $detalle = DB::table('tbl_detalle_solicitud_empleado as d')
             ->where('d.idSolicitud', $id)
             ->leftJoin('tbl_cargo as c', 'd.idCargo', '=', 'c.IdCargo')
@@ -84,23 +85,33 @@ class MisSolicitudesController extends Controller
                 'd.documentoEmpleado',
                 'd.IdTipoSolicitud',
                 'd.observaciones',
-                'd.rutaArchivoSolicitudEmpleado', // ✅ nuevo
+                'd.rutaArchivoSolicitudEmpleado',
                 'c.NombreCargo as cargo'
             )
             ->get();
 
-        // Agregar elementos de dotación a cada empleado
-        foreach ($detalle as $empleado) {
-            $empleado->elementos = DB::table('tbl_detalle_solicitud_elemento as el')
+        // Obtener todos los elementos de una sola vez
+        $detalleIds = $detalle->pluck('idDetalleSolicitud');
+        $elementosCompletos = collect();
+        
+        if ($detalleIds->isNotEmpty()) {
+            $elementosCompletos = DB::table('tbl_detalle_solicitud_elemento as el')
                 ->join('tbl_elementos as e', 'el.idElemento', '=', 'e.idElemento')
-                ->where('el.idDetalleSolicitud', $empleado->idDetalleSolicitud)
+                ->whereIn('el.idDetalleSolicitud', $detalleIds)
                 ->select(
+                    'el.idDetalleSolicitud',
                     'el.idElemento',
                     'el.TallaElemento as talla',
                     'el.Cantidad as cantidad',
                     'e.nombreElemento'
                 )
-                ->get();
+                ->get()
+                ->groupBy('idDetalleSolicitud');
+        }
+
+        // Agregar elementos a cada empleado
+        foreach ($detalle as $empleado) {
+            $empleado->elementos = $elementosCompletos[$empleado->idDetalleSolicitud] ?? collect();
         }
 
         return response()->json([
