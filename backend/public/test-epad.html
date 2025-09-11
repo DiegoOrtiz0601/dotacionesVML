@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba ePad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        #log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Prueba de ePad WebSigner</h1>
+    
+    <div id="status" class="status">
+        <h3>Estado del ePad:</h3>
+        <p id="extension-status">Verificando extensión...</p>
+        <p id="service-status">Verificando servicio...</p>
+        <p id="device-status">Verificando dispositivo...</p>
+    </div>
+
+    <div>
+        <h3>Controles de Prueba:</h3>
+        <button onclick="verificarEstado()">🔄 Verificar Estado</button>
+        <button onclick="probarCaptura()" id="btn-captura" disabled>📝 Probar Captura</button>
+        <button onclick="limpiarLog()">🗑️ Limpiar Log</button>
+    </div>
+
+    <div>
+        <h3>Log de Eventos:</h3>
+        <div id="log"></div>
+    </div>
+
+    <script src="/epad.js"></script>
+    <script>
+        let logElement = document.getElementById('log');
+        let btnCaptura = document.getElementById('btn-captura');
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}<br>`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+        
+        function limpiarLog() {
+            logElement.innerHTML = '';
+        }
+        
+        function actualizarEstado() {
+            const extensionStatus = document.getElementById('extension-status');
+            const serviceStatus = document.getElementById('service-status');
+            const deviceStatus = document.getElementById('device-status');
+            
+            // Verificar extensión
+            const extensionInstalled = !!document.documentElement.getAttribute("SigCaptureWebExtension-installed");
+            extensionStatus.textContent = `Extensión: ${extensionInstalled ? '✅ Instalada' : '❌ No instalada'}`;
+            extensionStatus.className = extensionInstalled ? 'success' : 'error';
+            
+            // Verificar servicio
+            const serviceAvailable = typeof window.ePadService !== 'undefined';
+            serviceStatus.textContent = `Servicio: ${serviceAvailable ? '✅ Disponible' : '❌ No disponible'}`;
+            serviceStatus.className = serviceAvailable ? 'success' : 'error';
+            
+            // Verificar dispositivo
+            const deviceConnected = extensionInstalled && serviceAvailable;
+            deviceStatus.textContent = `Dispositivo: ${deviceConnected ? '✅ Conectado' : '❌ Desconectado'}`;
+            deviceStatus.className = deviceConnected ? 'success' : 'error';
+            
+            // Habilitar/deshabilitar botón
+            btnCaptura.disabled = !deviceConnected;
+            
+            log(`Estado actualizado - Extensión: ${extensionInstalled}, Servicio: ${serviceAvailable}, Dispositivo: ${deviceConnected}`);
+        }
+        
+        function verificarEstado() {
+            log("🔄 Verificando estado del ePad...");
+            actualizarEstado();
+        }
+        
+        function probarCaptura() {
+            log("🚀 Iniciando prueba de captura...");
+            
+            const datosPrueba = {
+                firstName: "Usuario",
+                lastName: "Prueba",
+                eMail: "prueba@test.com",
+                location: "Oficina",
+                imageFormat: 2,
+                imageX: 300,
+                imageY: 150,
+                imageTransparency: false,
+                imageScaling: false,
+                maxUpScalePercent: 0.0,
+                rawDataFormat: "ENC",
+                minSigPoints: 25,
+                penThickness: 3,
+                penColor: "#000000",
+            };
+            
+            try {
+                // Crear elemento con el mensaje
+                const dataElem = document.createElement("SigCaptureWeb_ExtnDataElem");
+                dataElem.setAttribute("SigCaptureWeb_MsgAttribute", JSON.stringify(datosPrueba));
+                document.documentElement.appendChild(dataElem);
+                
+                log("📦 Elemento creado y agregado al DOM");
+                
+                // Crear y lanzar el evento de captura
+                const evt = document.createEvent("Events");
+                evt.initEvent("SigCaptureWeb_SignStartEvent", true, false);
+                dataElem.dispatchEvent(evt);
+                
+                log("🎯 Evento de captura disparado");
+                
+            } catch (error) {
+                log(`❌ Error al iniciar captura: ${error.message}`);
+            }
+        }
+        
+        // Configurar listener para respuestas
+        document.addEventListener("SigCaptureWeb_SignResponse", (event) => {
+            try {
+                log("📨 Evento de respuesta recibido");
+                const str = event.target.getAttribute("SigCaptureWeb_MsgAttribute");
+                log(`📝 Datos de respuesta: ${str}`);
+                
+                if (str) {
+                    const obj = JSON.parse(str);
+                    log(`📊 Objeto parseado: ${JSON.stringify(obj)}`);
+                    
+                    if (obj?.isSigned) {
+                        log("✅ Firma capturada exitosamente!");
+                    } else {
+                        log("❌ Firma no válida");
+                    }
+                } else {
+                    log("⚠️ No se encontraron datos en la respuesta");
+                }
+            } catch (error) {
+                log(`❌ Error al procesar respuesta: ${error.message}`);
+            }
+        });
+        
+        // Inicializar al cargar la página
+        document.addEventListener('DOMContentLoaded', () => {
+            log("🚀 Página cargada, inicializando prueba...");
+            setTimeout(() => {
+                actualizarEstado();
+            }, 1000);
+        });
+        
+        // Verificar estado cada 5 segundos
+        setInterval(actualizarEstado, 5000);
+    </script>
+</body>
+</html>
+
