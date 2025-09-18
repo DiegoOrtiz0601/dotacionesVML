@@ -51,10 +51,25 @@
         <p id="device-status">Verificando dispositivo...</p>
     </div>
 
+    <div id="alert-box" style="display: none;" class="status error">
+        <h3>🚨 PROBLEMA DETECTADO</h3>
+        <p><strong>La extensión WebSigner NO está instalada correctamente.</strong></p>
+        <p>Sin esta extensión, el ePad no puede funcionar. Para solucionarlo:</p>
+        <ol>
+            <li><strong>Descarga WebSigner:</strong> <a href="https://www.wacom.com/en-us/products/apps-services/websigner" target="_blank">Sitio oficial de Wacom</a></li>
+            <li><strong>Instala la extensión</strong> en tu navegador (Chrome/Edge)</li>
+            <li><strong>Reinicia el navegador</strong> completamente</li>
+            <li><strong>Verifica</strong> que esté habilitada en las extensiones del navegador</li>
+        </ol>
+        <p><em>💡 También puedes visitar: <a href="/instalar-websigner.html">Instrucciones locales</a></em></p>
+    </div>
+
     <div>
         <h3>Controles de Prueba:</h3>
         <button onclick="verificarEstado()">🔄 Verificar Estado</button>
         <button onclick="probarCaptura()" id="btn-captura" disabled>📝 Probar Captura</button>
+        <button onclick="diagnosticoAvanzado()">🔬 Diagnóstico Completo</button>
+        <button onclick="forzarActivacionWebSigner()">⚡ Forzar Activación</button>
         <button onclick="limpiarLog()">🗑️ Limpiar Log</button>
     </div>
 
@@ -79,13 +94,14 @@
             logElement.innerHTML = '';
         }
         
-        function actualizarEstado() {
+        async function actualizarEstado() {
             const extensionStatus = document.getElementById('extension-status');
             const serviceStatus = document.getElementById('service-status');
             const deviceStatus = document.getElementById('device-status');
+            const alertBox = document.getElementById('alert-box');
             
-            // Verificar extensión
-            const extensionInstalled = !!document.documentElement.getAttribute("SigCaptureWebExtension-installed");
+            // Verificar extensión usando el servicio mejorado
+            const extensionInstalled = window.ePadService ? window.ePadService.verificarExtension() : false;
             extensionStatus.textContent = `Extensión: ${extensionInstalled ? '✅ Instalada' : '❌ No instalada'}`;
             extensionStatus.className = extensionInstalled ? 'success' : 'error';
             
@@ -94,8 +110,41 @@
             serviceStatus.textContent = `Servicio: ${serviceAvailable ? '✅ Disponible' : '❌ No disponible'}`;
             serviceStatus.className = serviceAvailable ? 'success' : 'error';
             
-            // Verificar dispositivo
-            const deviceConnected = extensionInstalled && serviceAvailable;
+            // VALIDACIÓN CRÍTICA: Verificar si la extensión WebSigner está realmente instalada
+            const realExtensionCheck = document.documentElement.getAttribute("SigCaptureWebExtension-installed");
+            const hasGlobalObject = typeof window.SigCaptureWeb !== 'undefined';
+            
+            if (!realExtensionCheck && !hasGlobalObject) {
+                // Mostrar alerta crítica
+                alertBox.style.display = 'block';
+                extensionStatus.textContent = 'Extensión: ❌ WebSigner NO instalada';
+                extensionStatus.className = 'error';
+                deviceStatus.textContent = 'Dispositivo: ❌ No disponible (falta extensión)';
+                deviceStatus.className = 'error';
+                btnCaptura.disabled = true;
+                
+                log('🚨 PROBLEMA CRÍTICO: Extensión WebSigner no está instalada');
+                log('💡 Solución: Instalar WebSigner desde https://www.wacom.com/en-us/products/apps-services/websigner');
+                return;
+            } else {
+                // Ocultar alerta si la extensión está instalada
+                alertBox.style.display = 'none';
+            }
+            
+            // Verificar dispositivo físico
+            let deviceConnected = false;
+            if (extensionInstalled && serviceAvailable) {
+                deviceStatus.textContent = 'Dispositivo: 🔄 Verificando...';
+                deviceStatus.className = 'warning';
+                
+                try {
+                    deviceConnected = await window.ePadService.verificarDispositivo();
+                } catch (error) {
+                    log(`❌ Error al verificar dispositivo: ${error.message}`);
+                    deviceConnected = false;
+                }
+            }
+            
             deviceStatus.textContent = `Dispositivo: ${deviceConnected ? '✅ Conectado' : '❌ Desconectado'}`;
             deviceStatus.className = deviceConnected ? 'success' : 'error';
             
@@ -111,7 +160,14 @@
         }
         
         function probarCaptura() {
-            log("🚀 Iniciando prueba de captura...");
+            log("🚀 Iniciando prueba de captura completa...");
+            
+            // Verificar estado antes de la captura
+            const extensionInstalled = window.ePadService ? window.ePadService.verificarExtension() : false;
+            if (!extensionInstalled) {
+                log("❌ No se puede capturar - extensión no instalada");
+                return;
+            }
             
             const datosPrueba = {
                 firstName: "Usuario",
@@ -131,23 +187,175 @@
             };
             
             try {
-                // Crear elemento con el mensaje
-                const dataElem = document.createElement("SigCaptureWeb_ExtnDataElem");
-                dataElem.setAttribute("SigCaptureWeb_MsgAttribute", JSON.stringify(datosPrueba));
-                document.documentElement.appendChild(dataElem);
+                log("📋 Datos de captura: " + JSON.stringify(datosPrueba, null, 2));
                 
-                log("📦 Elemento creado y agregado al DOM");
-                
-                // Crear y lanzar el evento de captura
-                const evt = document.createEvent("Events");
-                evt.initEvent("SigCaptureWeb_SignStartEvent", true, false);
-                dataElem.dispatchEvent(evt);
-                
-                log("🎯 Evento de captura disparado");
+                // Usar el servicio ePad para capturar
+                if (window.ePadService && window.ePadService.capturarFirma) {
+                    window.ePadService.capturarFirma(datosPrueba)
+                        .then((resultado) => {
+                            log("✅ Captura exitosa: " + JSON.stringify(resultado, null, 2));
+                        })
+                        .catch((error) => {
+                            log("❌ Error en captura: " + error.message);
+                        });
+                } else {
+                    // Método manual como respaldo
+                    const dataElem = document.createElement("SigCaptureWeb_ExtnDataElem");
+                    dataElem.setAttribute("SigCaptureWeb_MsgAttribute", JSON.stringify(datosPrueba));
+                    document.documentElement.appendChild(dataElem);
+                    
+                    log("📦 Elemento creado y agregado al DOM");
+                    
+                    // Crear y lanzar el evento de captura
+                    const evt = document.createEvent("Events");
+                    evt.initEvent("SigCaptureWeb_SignStartEvent", true, false);
+                    dataElem.dispatchEvent(evt);
+                    
+                    log("🎯 Evento de captura disparado");
+                }
                 
             } catch (error) {
                 log(`❌ Error al iniciar captura: ${error.message}`);
             }
+        }
+        
+        // Función adicional para diagnóstico avanzado
+        function diagnosticoAvanzado() {
+            log("🔬 Iniciando diagnóstico COMPLETO del ePad...");
+            
+            // 1. Verificar extensión con todos los métodos
+            log("1️⃣ Verificando extensión WebSigner...");
+            const attrValue = document.documentElement.getAttribute("SigCaptureWebExtension-installed");
+            log(`   - Atributo documentElement: ${attrValue}`);
+            log(`   - Objeto SigCaptureWeb: ${typeof window.SigCaptureWeb}`);
+            log(`   - Servicio ePad: ${typeof window.ePadService}`);
+            
+            // 2. Intentar crear elemento
+            log("2️⃣ Probando creación de elementos...");
+            try {
+                const testElem = document.createElement("SigCaptureWeb_ExtnDataElem");
+                log(`   - Elemento creado: ${testElem ? 'Sí' : 'No'}`);
+                log(`   - TagName: ${testElem?.tagName}`);
+                log(`   - Constructor: ${testElem?.constructor?.name}`);
+                log(`   - Prototipo: ${Object.getPrototypeOf(testElem).constructor.name}`);
+                
+                // Verificar si el elemento tiene métodos específicos
+                log(`   - Métodos disponibles: ${Object.getOwnPropertyNames(testElem).length}`);
+                if (testElem.setAttribute) {
+                    testElem.setAttribute("test", "value");
+                    log(`   - setAttribute funciona: ${testElem.getAttribute("test") === "value"}`);
+                }
+            } catch (e) {
+                log(`   - Error: ${e.message}`);
+            }
+            
+            // 3. Verificar scripts cargados
+            log("3️⃣ Verificando scripts relacionados...");
+            const scripts = document.querySelectorAll('script');
+            let epadScripts = 0;
+            scripts.forEach(script => {
+                if (script.src && (script.src.includes('websigner') || script.src.includes('SigCapture') || script.src.includes('epad'))) {
+                    log(`   - Script encontrado: ${script.src}`);
+                    epadScripts++;
+                }
+            });
+            log(`   - Total scripts ePad: ${epadScripts}`);
+            
+            // 4. Verificar eventos disponibles
+            log("4️⃣ Verificando eventos del DOM...");
+            const events = ['SigCaptureWeb_SignResponse', 'SigCaptureWeb_SignStartEvent'];
+            events.forEach(eventName => {
+                try {
+                    const evt = document.createEvent("Events");
+                    evt.initEvent(eventName, true, false);
+                    log(`   - Evento ${eventName}: Disponible`);
+                } catch (e) {
+                    log(`   - Evento ${eventName}: Error - ${e.message}`);
+                }
+            });
+            
+            // 5. NUEVO: Verificar información del navegador
+            log("5️⃣ Información del navegador...");
+            log(`   - User Agent: ${navigator.userAgent}`);
+            log(`   - Navegador: ${getBrowserName()}`);
+            log(`   - Versión: ${getBrowserVersion()}`);
+            
+            // 6. NUEVO: Verificar extensiones instaladas
+            log("6️⃣ Verificando extensiones...");
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                log(`   - Chrome Runtime disponible: Sí`);
+                log(`   - Extension ID: ${chrome.runtime.id || 'No disponible'}`);
+            } else {
+                log(`   - Chrome Runtime disponible: No`);
+            }
+            
+            // 7. NUEVO: Verificar variables globales relacionadas
+            log("7️⃣ Variables globales relacionadas...");
+            const globalVars = ['SigCaptureWeb', 'WebSigner', 'SigCapture', 'wacom'];
+            globalVars.forEach(varName => {
+                log(`   - window.${varName}: ${typeof window[varName]}`);
+            });
+            
+            // 8. NUEVO: Verificar elementos en el DOM
+            log("8️⃣ Elementos WebSigner en DOM...");
+            const webSignerElements = document.querySelectorAll('[class*="SigCapture"], [id*="SigCapture"], [class*="WebSigner"], [id*="WebSigner"]');
+            log(`   - Elementos encontrados: ${webSignerElements.length}`);
+            webSignerElements.forEach((elem, index) => {
+                log(`   - Elemento ${index + 1}: ${elem.tagName} - ${elem.className || elem.id}`);
+            });
+            
+            log("🏁 Diagnóstico COMPLETO terminado");
+        }
+        
+        // Funciones auxiliares para detectar navegador
+        function getBrowserName() {
+            const userAgent = navigator.userAgent;
+            if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) return 'Chrome';
+            if (userAgent.includes('Edg')) return 'Edge';
+            if (userAgent.includes('Firefox')) return 'Firefox';
+            if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) return 'Safari';
+            return 'Desconocido';
+        }
+        
+        function getBrowserVersion() {
+            const userAgent = navigator.userAgent;
+            const match = userAgent.match(/(Chrome|Edg|Firefox|Safari)\/(\d+)/);
+            return match ? match[2] : 'Desconocida';
+        }
+        
+        // NUEVA función para forzar activación de WebSigner
+        function forzarActivacionWebSigner() {
+            log("🔄 Intentando forzar activación de WebSigner...");
+            
+            // Método 1: Intentar disparar eventos de inicialización
+            try {
+                const initEvent = new CustomEvent('SigCaptureWeb_Init', {
+                    detail: { force: true }
+                });
+                document.dispatchEvent(initEvent);
+                log("   - Evento de inicialización disparado");
+            } catch (e) {
+                log(`   - Error en evento de inicialización: ${e.message}`);
+            }
+            
+            // Método 2: Intentar crear múltiples elementos
+            try {
+                for (let i = 0; i < 3; i++) {
+                    const elem = document.createElement("SigCaptureWeb_ExtnDataElem");
+                    elem.id = `test-elem-${i}`;
+                    document.body.appendChild(elem);
+                    setTimeout(() => document.body.removeChild(elem), 1000);
+                }
+                log("   - Elementos de prueba creados y eliminados");
+            } catch (e) {
+                log(`   - Error creando elementos: ${e.message}`);
+            }
+            
+            // Método 3: Verificar después de un delay
+            setTimeout(() => {
+                log("🔍 Verificación post-activación...");
+                actualizarEstado();
+            }, 2000);
         }
         
         // Configurar listener para respuestas

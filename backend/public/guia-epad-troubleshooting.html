@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía de Solución de Problemas - ePad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .problem {
+            background-color: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .solution {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .code {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        h1 { color: #007bff; }
+        h2 { color: #28a745; }
+        h3 { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Guía de Solución de Problemas - ePad WebSigner</h1>
+    
+    <h2>📋 Diagnóstico Rápido</h2>
+    <p>Si tu ePad no está siendo reconocido, sigue estos pasos:</p>
+    
+    <div class="solution">
+        <h3>✅ Paso 1: Verificar Estado Básico</h3>
+        <ol>
+            <li>Ve a <a href="/test-epad.html" target="_blank">http://localhost:8000/test-epad.html</a></li>
+            <li>Haz clic en "🔄 Verificar Estado"</li>
+            <li>Observa los tres indicadores:
+                <ul>
+                    <li><strong>Extensión:</strong> Debe mostrar "✅ Instalada"</li>
+                    <li><strong>Servicio:</strong> Debe mostrar "✅ Disponible"</li>
+                    <li><strong>Dispositivo:</strong> Debe mostrar "✅ Conectado"</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <h2>🚨 Problemas Comunes y Soluciones</h2>
+
+    <div class="problem">
+        <h3>❌ Problema: "Extensión: ❌ No instalada"</h3>
+        <p><strong>Causa:</strong> La extensión WebSigner no está instalada en el navegador.</p>
+    </div>
+    <div class="solution">
+        <h3>🔧 Solución:</h3>
+        <ol>
+            <li>Ve a <a href="/instalar-websigner.html" target="_blank">http://localhost:8000/instalar-websigner.html</a></li>
+            <li>Sigue las instrucciones para descargar e instalar la extensión</li>
+            <li>Reinicia el navegador después de la instalación</li>
+            <li>Verifica que la extensión esté habilitada en:
+                <ul>
+                    <li><strong>Chrome:</strong> chrome://extensions/</li>
+                    <li><strong>Edge:</strong> edge://extensions/</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="problem">
+        <h3>❌ Problema: "Servicio: ❌ No disponible"</h3>
+        <p><strong>Causa:</strong> El servidor backend no está corriendo o el archivo epad.js no es accesible.</p>
+    </div>
+    <div class="solution">
+        <h3>🔧 Solución:</h3>
+        <ol>
+            <li>Verifica que el servidor esté corriendo en <code>localhost:8000</code></li>
+            <li>Ejecuta en la terminal del backend:
+                <div class="code">php artisan serve --host=localhost --port=8000</div>
+            </li>
+            <li>Verifica que puedas acceder a <a href="/epad.js" target="_blank">http://localhost:8000/epad.js</a></li>
+        </ol>
+    </div>
+
+    <div class="problem">
+        <h3>❌ Problema: "Dispositivo: ❌ Desconectado" (Tu caso actual)</h3>
+        <p><strong>Causa:</strong> El ePad físico no está conectado, no responde, o hay problemas de comunicación.</p>
+    </div>
+    <div class="solution">
+        <h3>🔧 Solución:</h3>
+        <ol>
+            <li><strong>Verificar conexión física:</strong>
+                <ul>
+                    <li>Asegúrate de que el ePad esté conectado por USB</li>
+                    <li>Verifica que el cable USB funcione correctamente</li>
+                    <li>Prueba con otro puerto USB</li>
+                </ul>
+            </li>
+            <li><strong>Verificar el dispositivo:</strong>
+                <ul>
+                    <li>El ePad debe estar encendido (si tiene botón de encendido)</li>
+                    <li>Verifica que no haya errores en el dispositivo</li>
+                    <li>Si es posible, prueba el ePad en otro equipo</li>
+                </ul>
+            </li>
+            <li><strong>Verificar drivers:</strong>
+                <ul>
+                    <li>Ve al Administrador de dispositivos de Windows</li>
+                    <li>Busca el ePad en la lista de dispositivos</li>
+                    <li>Si aparece con un ícono de advertencia, actualiza los drivers</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="warning">
+        <h3>⚠️ Diagnóstico Avanzado</h3>
+        <p>Si los pasos anteriores no funcionan:</p>
+        <ol>
+            <li>En la página de prueba, haz clic en "🔬 Diagnóstico Avanzado"</li>
+            <li>Revisa los logs detallados en la consola del navegador (F12)</li>
+            <li>Busca mensajes específicos de error</li>
+        </ol>
+    </div>
+
+    <h2>🔍 Mensajes de Log Importantes</h2>
+    
+    <div class="code">
+        <h4>✅ Mensajes Positivos:</h4>
+        <ul>
+            <li>"✅ Extensión detectada por [método]"</li>
+            <li>"✅ ePad respondió - dispositivo conectado"</li>
+            <li>"✅ Servicio ePad inicializado correctamente"</li>
+        </ul>
+    </div>
+
+    <div class="code">
+        <h4>❌ Mensajes de Error:</h4>
+        <ul>
+            <li>"⏰ Timeout - ePad no respondió" → Dispositivo no conectado físicamente</li>
+            <li>"❌ Extensión WebSigner no detectada" → Instalar extensión</li>
+            <li>"❌ Servicio ePad no disponible" → Verificar servidor</li>
+        </ul>
+    </div>
+
+    <h2>📞 Pasos de Escalamiento</h2>
+    
+    <div class="warning">
+        <p><strong>Si ninguna de las soluciones anteriores funciona:</strong></p>
+        <ol>
+            <li>Documenta los mensajes de error específicos</li>
+            <li>Toma captura de pantalla del estado en test-epad.html</li>
+            <li>Verifica la marca y modelo exacto del ePad</li>
+            <li>Consulta la documentación específica del fabricante</li>
+            <li>Considera contactar al soporte técnico del dispositivo</li>
+        </ol>
+    </div>
+
+    <h2>🔗 Enlaces Útiles</h2>
+    <ul>
+        <li><a href="/test-epad.html">Página de Prueba del ePad</a></li>
+        <li><a href="/instalar-websigner.html">Instrucciones de Instalación WebSigner</a></li>
+        <li><a href="/epad.js">Script del Servicio ePad</a></li>
+    </ul>
+
+    <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; color: #666;">
+        <p><em>Última actualización: Septiembre 2024</em></p>
+    </footer>
+</body>
+</html>
+
+

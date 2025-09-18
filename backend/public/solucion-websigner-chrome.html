@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solución WebSigner - Chrome</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .critical {
+            background-color: #f8d7da;
+            border: 2px solid #dc3545;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .solution {
+            background-color: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .step {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .code {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        h1 { color: #dc3545; }
+        h2 { color: #007bff; }
+        h3 { color: #28a745; }
+    </style>
+</head>
+<body>
+    <h1>🚨 Solución: WebSigner en Chrome</h1>
+    
+    <div class="critical">
+        <h2>📋 Problema Identificado</h2>
+        <p><strong>WebSigner está instalado en el sistema pero la extensión de Chrome NO está activa.</strong></p>
+        <ul>
+            <li>✅ Atributo documentElement: true</li>
+            <li>❌ Objeto SigCaptureWeb: undefined</li>
+            <li>❌ Chrome Runtime: No disponible</li>
+            <li>❌ Variables globales: undefined</li>
+        </ul>
+    </div>
+
+    <div class="solution">
+        <h2>🔧 Solución Inmediata</h2>
+        
+        <div class="step">
+            <h3>Paso 1: Verificar Extensiones de Chrome</h3>
+            <ol>
+                <li>Abre Chrome y ve a: <strong>chrome://extensions/</strong></li>
+                <li>Busca cualquiera de estos nombres:
+                    <ul>
+                        <li><strong>WebSigner</strong></li>
+                        <li><strong>SigCapture</strong></li>
+                        <li><strong>Wacom WebSigner</strong></li>
+                        <li><strong>Signature Capture</strong></li>
+                    </ul>
+                </li>
+                <li>Si encuentras la extensión:
+                    <ul>
+                        <li>Asegúrate de que esté <strong>HABILITADA</strong> (toggle azul)</li>
+                        <li>Haz clic en <strong>"Detalles"</strong></li>
+                        <li>Verifica permisos</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Paso 2: Si NO encuentras la extensión</h3>
+            <p><strong>La instalación de WebSigner no incluyó la extensión de Chrome. Opciones:</strong></p>
+            
+            <h4>Opción A: Reinstalar WebSigner Completo</h4>
+            <ol>
+                <li>Desinstala WebSigner completamente desde Panel de Control</li>
+                <li>Reinicia el equipo</li>
+                <li>Descarga nuevamente desde: <a href="https://www.wacom.com/en-us/products/apps-services/websigner" target="_blank">Sitio oficial Wacom</a></li>
+                <li>Instala como <strong>Administrador</strong></li>
+                <li>Durante la instalación, asegúrate de que Chrome esté cerrado</li>
+            </ol>
+
+            <h4>Opción B: Instalar Solo la Extensión</h4>
+            <ol>
+                <li>Busca en el directorio de instalación de WebSigner:
+                    <div class="code">C:\Program Files\Wacom\WebSigner\</div>
+                    o
+                    <div class="code">C:\Program Files (x86)\Wacom\WebSigner\</div>
+                </li>
+                <li>Busca un archivo <strong>.crx</strong> o carpeta <strong>extension</strong></li>
+                <li>En Chrome, ve a <strong>chrome://extensions/</strong></li>
+                <li>Activa <strong>"Modo de desarrollador"</strong> (esquina superior derecha)</li>
+                <li>Haz clic en <strong>"Cargar extensión sin empaquetar"</strong></li>
+                <li>Selecciona la carpeta de la extensión</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Paso 3: Configurar Permisos</h3>
+            <p>Una vez que la extensión esté instalada:</p>
+            <ol>
+                <li>En <strong>chrome://extensions/</strong>, busca WebSigner</li>
+                <li>Haz clic en <strong>"Detalles"</strong></li>
+                <li>En "Acceso al sitio", selecciona <strong>"En todos los sitios"</strong></li>
+                <li>Habilita <strong>"Permitir en modo incógnito"</strong> si es necesario</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Paso 4: Verificar Funcionamiento</h3>
+            <ol>
+                <li>Cierra y abre Chrome completamente</li>
+                <li>Ve a: <a href="/test-epad.html">http://localhost:8000/test-epad.html</a></li>
+                <li>Haz clic en <strong>"🔄 Verificar Estado"</strong></li>
+                <li>Deberías ver:
+                    <ul>
+                        <li>✅ Extensión: Instalada</li>
+                        <li>✅ Servicio: Disponible</li>
+                        <li>✅ Dispositivo: Conectado (si el ePad está conectado)</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="critical">
+        <h2>⚠️ Problemas Comunes</h2>
+        
+        <h3>Problema: "Esta extensión puede haber sido dañada"</h3>
+        <p><strong>Solución:</strong> Desinstalar y reinstalar WebSigner completamente</p>
+
+        <h3>Problema: Extensión instalada pero sigue sin funcionar</h3>
+        <p><strong>Solución:</strong></p>
+        <ol>
+            <li>Deshabilitar y rehabilitar la extensión</li>
+            <li>Reiniciar Chrome completamente</li>
+            <li>Verificar que no haya conflictos con otras extensiones</li>
+        </ol>
+
+        <h3>Problema: No encuentra archivos de extensión</h3>
+        <p><strong>Solución:</strong> Reinstalar WebSigner desde el sitio oficial</p>
+    </div>
+
+    <div class="solution">
+        <h2>🎯 Verificación Final</h2>
+        <p>Después de seguir estos pasos, el diagnóstico debería mostrar:</p>
+        <div class="code">
+✅ - Atributo documentElement: true
+✅ - Objeto SigCaptureWeb: object (no undefined)
+✅ - Chrome Runtime disponible: Sí
+✅ - Constructor: SigCaptureWebExtnDataElem (no HTMLUnknownElement)
+        </div>
+    </div>
+
+    <p><strong>Enlaces útiles:</strong></p>
+    <ul>
+        <li><a href="/test-epad.html">Página de Prueba ePad</a></li>
+        <li><a href="/guia-epad-troubleshooting.html">Guía Completa de Solución de Problemas</a></li>
+        <li><a href="https://www.wacom.com/en-us/products/apps-services/websigner">Descargar WebSigner Oficial</a></li>
+    </ul>
+
+    <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #eee; color: #666;">
+        <p><em>Actualizado: Septiembre 2024 - Específico para Chrome 140+</em></p>
+    </footer>
+</body>
+</html>
+
+
