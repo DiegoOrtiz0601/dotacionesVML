@@ -33,6 +33,7 @@ use App\Http\Controllers\EntregaSolicitudController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExcelSolicitudController;
 use App\Http\Controllers\PDFSolicitudController;
+use App\Http\Controllers\SignatureController;
 
 // ─────────────────────────────────────────────────────────────
 // 🟢 1. Ruta de login (fuera del middleware Sanctum)
@@ -116,3 +117,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/generar-pdf-entrega', [EntregaPDFController::class, 'generar']);
 
 });
+
+// 📱 Módulo: Firma Electrónica con QR (sin autenticación)
+Route::post('/signature/generate-token', [SignatureController::class, 'generateToken']);
+Route::get('/signature/status/{token}', [SignatureController::class, 'getTokenStatus']);
+Route::get('/signature/get/{token}', [SignatureController::class, 'getSignature']);
+Route::post('/signature/cleanup', [SignatureController::class, 'cleanupExpiredTokens']);

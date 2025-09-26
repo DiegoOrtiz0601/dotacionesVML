@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Laravel\Sanctum\Http\Controllers\CsrfCookieController;
 use App\Http\Controllers\EntregaPDFController; // ✅ Asegúrate de importar el controlador
 use App\Http\Controllers\DocumentoEntregaController;
+use App\Http\Controllers\SignatureController;
 // ✅ Ruta necesaria para Sanctum: CSRF Cookie
 Route::get('/sanctum/csrf-cookie', [CsrfCookieController::class, 'show']);
 
@@ -64,3 +65,7 @@ Route::get('/test-pdf', function () {
 // ✅ Ruta firmada para descarga segura del PDF
 Route::get('/descargar-entrega', [EntregaPDFController::class, 'descargarPublico'])->name('descargar.pdf.entrega');
 Route::get('/descargar-pdf/{documento}', [DocumentoEntregaController::class, 'descargar']);
+
+// 📱 Rutas para firma móvil (sin autenticación)
+Route::get('/firma/{token}', [SignatureController::class, 'showSignaturePage'])->name('signature.mobile');
+Route::post('/firma/{token}', [SignatureController::class, 'processSignature'])->name('signature.process');

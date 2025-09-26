@@ -1,6 +1,6 @@
 import React from "react";
 import SignatureCanvas from "react-signature-canvas";
-import { Trash2, FileSignature, XCircle, TabletSmartphone } from "lucide-react";
+import { Trash2, FileSignature, XCircle, TabletSmartphone, QrCode } from "lucide-react";
 
 const ModalFirma = ({
   modoFirma,
@@ -14,6 +14,7 @@ const ModalFirma = ({
   guardarFirma,
   capturarFirmaDesdeEPAD,
   setMostrarFirma,
+  abrirModalQR,
 }) => (
   <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
     <div className="bg-white p-6 rounded shadow-xl w-full max-w-lg">
@@ -28,6 +29,7 @@ const ModalFirma = ({
     >
       <option value="canvas">Dibujar firma</option>
       <option value="epad">Capturar desde ePad</option>
+      <option value="qr">Firma con QR móvil</option>
     </select>
   </div>
 </div>
@@ -89,10 +91,36 @@ const ModalFirma = ({
       {modoFirma === "epad" && (
         <div className="flex flex-col items-center gap-4 mt-4">
           <button
-            onClick={capturarFirmaDesdeEPAD}
+            onClick={() => {
+              console.log("🔘 Botón ePad clickeado");
+              console.log("📋 capturarFirmaDesdeEPAD:", typeof capturarFirmaDesdeEPAD);
+              capturarFirmaDesdeEPAD();
+            }}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-all duration-300"
           >
             <TabletSmartphone className="w-5 h-5" /> Iniciar captura desde ePad
+          </button>
+        </div>
+      )}
+
+      {/* Firma con QR móvil */}
+      {modoFirma === "qr" && (
+        <div className="flex flex-col items-center gap-4 mt-4">
+          <div className="text-center">
+            <QrCode className="w-12 h-12 text-blue-500 mx-auto mb-2" />
+            <p className="text-gray-600 mb-4">
+              Genere un código QR para firmar desde su dispositivo móvil
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              console.log("🔘 Botón QR clickeado");
+              abrirModalQR();
+              setMostrarFirma(false);
+            }}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition-all duration-300"
+          >
+            <QrCode className="w-5 h-5" /> Generar QR para Firma Móvil
           </button>
         </div>
       )}
